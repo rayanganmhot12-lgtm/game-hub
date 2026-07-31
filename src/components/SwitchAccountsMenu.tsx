@@ -35,10 +35,20 @@ export default function SwitchAccountsMenu() {
   const [adding, setAdding] = useState(false);
 
   async function loadMe() {
-    const res = await fetch("/api/me");
-    const data = (await res.json()) as MeResponse;
-    setMe(data);
-    setLoaded(true);
+    try {
+      const res = await fetch("/api/me");
+      if (!res.ok) {
+        showToast("Couldn't load your accounts.", "error");
+        setLoaded(true);
+        return;
+      }
+      const data = (await res.json()) as MeResponse;
+      setMe(data);
+      setLoaded(true);
+    } catch {
+      showToast("Couldn't load your accounts.", "error");
+      setLoaded(true);
+    }
   }
 
   function toggleOpen() {
@@ -57,11 +67,16 @@ export default function SwitchAccountsMenu() {
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
+        setLoaded(false);
+        setMe(null);
+        setOpen(false);
         router.push("/dashboard");
         router.refresh();
       } else {
         showToast(data.error ?? "Couldn't switch accounts.", "error");
       }
+    } catch {
+      showToast("Couldn't switch accounts.", "error");
     } finally {
       setSwitchingTo(null);
     }
@@ -78,6 +93,9 @@ export default function SwitchAccountsMenu() {
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
+        setLoaded(false);
+        setMe(null);
+        setOpen(false);
         setAddOpen(false);
         setAddEmail("");
         setAddPassword("");
@@ -86,6 +104,8 @@ export default function SwitchAccountsMenu() {
       } else {
         showToast(data.error ?? "Couldn't add that account.", "error");
       }
+    } catch {
+      showToast("Couldn't add that account.", "error");
     } finally {
       setAdding(false);
     }
