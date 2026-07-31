@@ -17,6 +17,7 @@ let serverProcess = null;
 let mainWindow = null;
 let tray = null;
 let isQuitting = false;
+let installInFlight = false;
 
 function waitForServer(url, timeoutMs = 60000) {
   return new Promise((resolve, reject) => {
@@ -65,6 +66,7 @@ function getOrCreateSessionSecret() {
 // untouched by updates and by the uninstaller's /KEEP_APP_DATA path.
 function ensureUserData() {
   const userDataDir = app.getPath("userData");
+  fs.mkdirSync(userDataDir, { recursive: true });
   const seedResourcesDir = path.join(process.resourcesPath, "standalone");
 
   const dbPath = path.join(userDataDir, "dev.db");
@@ -98,7 +100,18 @@ function startServer() {
     return;
   }
 
-  const { dbPath, userDataDir } = ensureUserData();
+  let dbPath, userDataDir;
+  try {
+    ({ dbPath, userDataDir } = ensureUserData());
+  } catch (err) {
+    // A full/locked disk or an antivirus quarantine could make this throw —
+    // without a database path there is nothing useful the server can do, so
+    // fail loudly instead of an unhandled rejection crashing with no
+    // explanation.
+    dialog.showErrorBox("Game Hub couldn't start", `Failed to prepare its data folder:\n\n${err.message}`);
+    app.quit();
+    return;
+  }
   const serverPath = path.join(process.resourcesPath, "standalone", "server.js");
   serverProcess = spawn(process.execPath, [serverPath], {
     cwd: path.dirname(serverPath),
@@ -330,6 +343,7 @@ function setupAutoUpdater() {
     // NSIS tries to replace it. Install silently (isSilent) and relaunch
     // automatically (isForceRunAfter) for the seamless update experience the
     // design calls for, rather than re-running the full first-install wizard.
+    installInFlight = true;
     stopServer();
     autoUpdater.quitAndInstall(true, true);
   });
@@ -337,6 +351,14 @@ function setupAutoUpdater() {
   autoUpdater.on("error", (err) => {
     // A failed update check must never block the app from working normally.
     console.error("Auto-update check failed:", err);
+    // If this error happened after we'd already stopped the server to
+    // install (e.g. the installer couldn't launch), quitAndInstall's own
+    // app.quit() is never reached — restart the server so the user isn't
+    // left staring at a dead app instead of just missing this update.
+    if (installInFlight) {
+      installInFlight = false;
+      startServer();
+    }
   });
 
   autoUpdater.checkForUpdates();
@@ -378,13 +400,16 @@ function stopServer() {
   serverProcess = null;
 
   if (process.platform === "win32") {
-    // serverProcess is a cmd.exe wrapper (spawned with shell: true) — killing
-    // it alone leaves the actual node/next dev processes it forked running.
-    // /t kills the whole process tree.
+    // In dev, serverProcess is a cmd.exe wrapper (spawned with shell: true)
+    // whose forked node/next children would otherwise survive it; in the
+    // packaged build it's the server process itself. /t kills the whole
+    // tree either way. A timeout keeps a hung taskkill from freezing the
+    // main process forever (it previously ran fire-and-forget, so this is
+    // a new failure mode being guarded against, not a regression).
     try {
-      execFileSync("taskkill", ["/pid", String(pid), "/t", "/f"]);
+      execFileSync("taskkill", ["/pid", String(pid), "/t", "/f"], { timeout: 10000, windowsHide: true });
     } catch {
-      // Already exited — nothing to do.
+      // Already exited, or timed out — either way, move on.
     }
   } else {
     proc.kill();
