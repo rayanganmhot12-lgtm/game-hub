@@ -4,6 +4,7 @@ const http = require("http");
 const fs = require("fs");
 const crypto = require("crypto");
 const { spawn } = require("child_process");
+const { autoUpdater } = require("electron-updater");
 
 require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
 
@@ -263,6 +264,46 @@ async function updateDiscordPresence() {
   }
 }
 
+// Checks GitHub Releases for a newer version and prompts before doing
+// anything — never a silent/forced update. Only runs in packaged builds;
+// there is nothing to "update" in a dev checkout.
+const UPDATE_CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000; // 4 hours — the app is
+// designed to keep running in the tray for long stretches, so a single
+// on-launch check isn't enough to reach people in a reasonable time.
+
+function setupAutoUpdater() {
+  if (!app.isPackaged) return;
+
+  autoUpdater.autoDownload = false;
+  autoUpdater.autoInstallOnAppQuit = false;
+
+  autoUpdater.on("update-available", async (info) => {
+    const { response } = await dialog.showMessageBox(mainWindow, {
+      type: "info",
+      title: "Update available",
+      message: `Game Hub ${info.version} is available. Update now?`,
+      buttons: ["Update Now", "Later"],
+      defaultId: 0,
+      cancelId: 1,
+    });
+    if (response === 0) {
+      autoUpdater.downloadUpdate();
+    }
+  });
+
+  autoUpdater.on("update-downloaded", () => {
+    autoUpdater.quitAndInstall();
+  });
+
+  autoUpdater.on("error", (err) => {
+    // A failed update check must never block the app from working normally.
+    console.error("Auto-update check failed:", err);
+  });
+
+  autoUpdater.checkForUpdates();
+  setInterval(() => autoUpdater.checkForUpdates(), UPDATE_CHECK_INTERVAL_MS);
+}
+
 app.whenReady().then(async () => {
   startServer();
   try {
@@ -275,6 +316,7 @@ app.whenReady().then(async () => {
   createWindow();
   createTray();
   setupDiscordPresence();
+  setupAutoUpdater();
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
