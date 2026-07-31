@@ -88,7 +88,32 @@ module.exports = async function (context) {
   if (replacedNested > 0) {
     console.log(`afterPack: replaced ${replacedNested} additional copy/copies of better_sqlite3.node with the Electron-ABI build.`);
   }
+
+  // Final assertion: nothing under the packaged output should be a symlink
+  // at all at this point. Catches any traced external package this script
+  // doesn't yet know to repoint — turning "silently broken on a friend's
+  // PC" into "build fails on mine."
+  const remainingSymlinks = findSymlinks(standaloneDest);
+  if (remainingSymlinks.length > 0) {
+    throw new Error(
+      `afterPack: ${remainingSymlinks.length} symlink(s) remain in the packaged output (should be zero):\n${remainingSymlinks.join("\n")}`
+    );
+  }
 };
+
+function findSymlinks(dir) {
+  if (!fs.existsSync(dir)) return [];
+  const found = [];
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isSymbolicLink()) {
+      found.push(full);
+    } else if (entry.isDirectory()) {
+      found.push(...findSymlinks(full));
+    }
+  }
+  return found;
+}
 
 function rebuildBetterSqlite3ForElectron(root) {
   const electronVersion = require(path.join(root, "node_modules", "electron", "package.json")).version;
@@ -195,8 +220,13 @@ function repointHashedExternalSymlinks(nestedNodeModulesDir, topLevelNodeModules
         const strippedName = entry.name.replace(/-[0-9a-f]{8,}$/i, "");
         const source = path.join(topLevelNodeModulesDir, ...scopeSegments, strippedName);
         if (!fs.existsSync(source)) {
-          console.warn(`afterPack: no top-level counterpart at ${source} for traced symlink ${entryPath} — leaving it as-is.`);
-          continue;
+          // Never leave a dev-machine-absolute-path symlink in the shipped
+          // installer — that's exactly the bug this function exists to fix.
+          // A silent skip here would ship a build that only works on this
+          // machine, discoverable only by a friend whose app crashes.
+          throw new Error(
+            `afterPack: no top-level counterpart at ${source} for traced symlink ${entryPath} — refusing to package a dev-machine-only symlink.`
+          );
         }
         // A plain (non-recursive) rmdir removes only the junction/symlink
         // itself. Using {recursive: true} here would be dangerous: on

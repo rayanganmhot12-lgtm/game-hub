@@ -3,7 +3,7 @@ const path = require("path");
 const http = require("http");
 const fs = require("fs");
 const crypto = require("crypto");
-const { spawn } = require("child_process");
+const { spawn, execFileSync } = require("child_process");
 const { autoUpdater } = require("electron-updater");
 
 require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
@@ -56,6 +56,36 @@ function getOrCreateSessionSecret() {
   return sessionSecret;
 }
 
+// The live database and uploaded music files must live in Electron's
+// userData directory, never inside the install directory: NSIS's update
+// flow deletes the entire install directory on every update (its
+// uninstaller runs an atomicRMDir over $INSTDIR), so anything left there —
+// a friend's account, library, chat history, or uploaded playlist — would
+// be silently wiped the first time they accept an update. userData is
+// untouched by updates and by the uninstaller's /KEEP_APP_DATA path.
+function ensureUserData() {
+  const userDataDir = app.getPath("userData");
+  const seedResourcesDir = path.join(process.resourcesPath, "standalone");
+
+  const dbPath = path.join(userDataDir, "dev.db");
+  if (!fs.existsSync(dbPath)) {
+    fs.copyFileSync(path.join(seedResourcesDir, "dev.db"), dbPath);
+  }
+
+  const uploadsDir = path.join(userDataDir, "uploads", "music");
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+    const seedUploadsDir = path.join(seedResourcesDir, "uploads", "music");
+    if (fs.existsSync(seedUploadsDir)) {
+      for (const file of fs.readdirSync(seedUploadsDir)) {
+        fs.copyFileSync(path.join(seedUploadsDir, file), path.join(uploadsDir, file));
+      }
+    }
+  }
+
+  return { dbPath, userDataDir };
+}
+
 function startServer() {
   const isPackaged = app.isPackaged;
 
@@ -68,6 +98,7 @@ function startServer() {
     return;
   }
 
+  const { dbPath, userDataDir } = ensureUserData();
   const serverPath = path.join(process.resourcesPath, "standalone", "server.js");
   serverProcess = spawn(process.execPath, [serverPath], {
     cwd: path.dirname(serverPath),
@@ -77,6 +108,8 @@ function startServer() {
       PORT: String(PORT),
       NODE_ENV: "production",
       SESSION_SECRET: getOrCreateSessionSecret(),
+      DATABASE_URL: `file:${dbPath.replace(/\\/g, "/")}`,
+      GAMEHUB_DATA_DIR: userDataDir,
       // The packaged app has no separate Node.js binary bundled — this tells
       // Electron's own binary to behave as plain Node instead of launching a
       // second GUI instance when we spawn it to run server.js.
@@ -292,7 +325,13 @@ function setupAutoUpdater() {
   });
 
   autoUpdater.on("update-downloaded", () => {
-    autoUpdater.quitAndInstall();
+    // Stop the server first (and wait for it — stopServer is synchronous)
+    // so its open file handles on the install directory are released before
+    // NSIS tries to replace it. Install silently (isSilent) and relaunch
+    // automatically (isForceRunAfter) for the seamless update experience the
+    // design calls for, rather than re-running the full first-install wizard.
+    stopServer();
+    autoUpdater.quitAndInstall(true, true);
   });
 
   autoUpdater.on("error", (err) => {
@@ -327,6 +366,11 @@ app.whenReady().then(async () => {
   });
 });
 
+// Synchronous so callers can rely on the server having actually exited
+// before proceeding — critical for the auto-update path below, where NSIS's
+// uninstall step fails or hangs if the server still holds the native
+// .node addon's file handle open when it tries to delete the install
+// directory.
 function stopServer() {
   if (!serverProcess) return;
   const pid = serverProcess.pid;
@@ -337,7 +381,11 @@ function stopServer() {
     // serverProcess is a cmd.exe wrapper (spawned with shell: true) — killing
     // it alone leaves the actual node/next dev processes it forked running.
     // /t kills the whole process tree.
-    spawn("taskkill", ["/pid", String(pid), "/t", "/f"]);
+    try {
+      execFileSync("taskkill", ["/pid", String(pid), "/t", "/f"]);
+    } catch {
+      // Already exited — nothing to do.
+    }
   } else {
     proc.kill();
   }

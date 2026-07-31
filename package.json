@@ -56,6 +56,7 @@
       "output": "release"
     },
     "afterPack": "scripts/after-pack.js",
+    "artifactName": "${name}-Setup-${version}.${ext}",
     "files": [
       "electron/**/*"
     ],
