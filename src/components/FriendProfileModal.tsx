@@ -7,6 +7,7 @@ import { X, CalendarDays, Pencil, Copy, Check, ChevronRight, Phone, Plus } from 
 import { CosmeticFrame, CosmeticBadge, CosmeticBanner, CosmeticPreview } from "@/components/CosmeticFrame";
 import { TagChip } from "@/components/ServerChips";
 import { RoleChip } from "@/components/ServerModerationTabs";
+import SwitchAccountsMenu from "@/components/SwitchAccountsMenu";
 import Avatar from "@/components/Avatar";
 import { useToast } from "@/context/ToastContext";
 import { fetchProfile, type PublicProfile } from "@/lib/profileRealtime";
@@ -369,6 +370,7 @@ export default function FriendProfileModal({
                   )}
                 </div>
               )}
+              {isSelf && <SwitchAccountsMenu />}
               <button
                 onClick={copyUserId}
                 className="flex w-full items-center gap-2 rounded-lg border border-border/60 bg-surface-2/30 px-3 py-2 text-xs text-foreground transition-colors hover:bg-surface-2/60"
