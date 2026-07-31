@@ -41,6 +41,13 @@ model User {
   // an image this size, and avoids needing a separate file-serving route.
   avatarDataUrl        String?
   bio                  String?
+  // Freeform, e.g. "she/her" or "he/they" — shown under the display name on
+  // the profile card, next to the custom note below.
+  pronouns             String?
+  // A short Discord-style custom status line, separate from bio (which is
+  // the longer "About Me" block) and separate from the online/idle/dnd
+  // presence status in presence.ts.
+  profileNote          String?
   // Wide profile banner, same resized-data-URI approach as avatarDataUrl.
   bannerDataUrl        String?
   // A "banner" cosmetic id (animated shimmer/aurora overlay) — same pattern

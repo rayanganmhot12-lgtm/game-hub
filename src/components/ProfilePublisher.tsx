@@ -12,6 +12,8 @@ export default function ProfilePublisher({
   avatarDataUrl,
   bannerDataUrl,
   bio,
+  pronouns,
+  profileNote,
   badge,
   frame,
   banner,
@@ -23,6 +25,8 @@ export default function ProfilePublisher({
   avatarDataUrl: string | null;
   bannerDataUrl: string | null;
   bio: string | null;
+  pronouns: string | null;
+  profileNote: string | null;
   badge: string | null;
   frame: string | null;
   banner: string | null;
@@ -35,13 +39,28 @@ export default function ProfilePublisher({
       avatarDataUrl,
       bannerDataUrl,
       bio,
+      pronouns,
+      profileNote,
       badge,
       frame,
       banner,
       accentColor,
       pinnedCosmeticId,
     });
-  }, [myCode, displayName, avatarDataUrl, bannerDataUrl, bio, badge, frame, banner, accentColor, pinnedCosmeticId]);
+  }, [
+    myCode,
+    displayName,
+    avatarDataUrl,
+    bannerDataUrl,
+    bio,
+    pronouns,
+    profileNote,
+    badge,
+    frame,
+    banner,
+    accentColor,
+    pinnedCosmeticId,
+  ]);
 
   return null;
 }

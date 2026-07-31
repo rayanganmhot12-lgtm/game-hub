@@ -51,6 +51,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             avatarDataUrl={user.avatarDataUrl}
             bannerDataUrl={user.bannerDataUrl}
             bio={user.bio}
+            pronouns={user.pronouns}
+            profileNote={user.profileNote}
             badge={user.equippedBadge}
             frame={user.equippedFrame}
             banner={user.equippedBanner}

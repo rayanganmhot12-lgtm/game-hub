@@ -14,6 +14,8 @@ export interface PublicProfile {
   avatarDataUrl?: string | null;
   bannerDataUrl?: string | null;
   bio?: string | null;
+  pronouns?: string | null;
+  profileNote?: string | null;
   badge?: string | null;
   frame?: string | null;
   banner?: string | null;

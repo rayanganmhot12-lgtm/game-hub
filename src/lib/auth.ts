@@ -19,6 +19,8 @@ export async function getCurrentUser() {
       displayName: true,
       avatarDataUrl: true,
       bio: true,
+      pronouns: true,
+      profileNote: true,
       bannerDataUrl: true,
       equippedBanner: true,
       accentColor: true,

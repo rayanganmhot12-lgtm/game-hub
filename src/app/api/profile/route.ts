@@ -12,6 +12,8 @@ const MAX_BANNER_GIF_DATA_URL_LENGTH = 3_500_000;
 const STATIC_IMAGE_DATA_URL_PATTERN = /^data:image\/(jpeg|png|webp);base64,/;
 const GIF_DATA_URL_PATTERN = /^data:image\/gif;base64,/;
 const MAX_BIO_LENGTH = 190;
+const MAX_PRONOUNS_LENGTH = 30;
+const MAX_PROFILE_NOTE_LENGTH = 60;
 const HEX_COLOR_PATTERN = /^#[0-9a-fA-F]{6}$/;
 
 export async function PATCH(request: NextRequest) {
@@ -45,6 +47,8 @@ export async function PATCH(request: NextRequest) {
     avatarDataUrl?: string | null;
     bannerDataUrl?: string | null;
     bio?: string | null;
+    pronouns?: string | null;
+    profileNote?: string | null;
     accentColor?: string | null;
     pinnedCosmeticId?: string | null;
   } = {};
@@ -89,6 +93,29 @@ export async function PATCH(request: NextRequest) {
     }
   }
 
+  if ("pronouns" in body) {
+    if (body.pronouns === null) {
+      data.pronouns = null;
+    } else if (typeof body.pronouns === "string" && body.pronouns.length <= MAX_PRONOUNS_LENGTH) {
+      data.pronouns = body.pronouns.trim() || null;
+    } else {
+      return NextResponse.json({ error: `Pronouns must be ${MAX_PRONOUNS_LENGTH} characters or fewer.` }, { status: 400 });
+    }
+  }
+
+  if ("profileNote" in body) {
+    if (body.profileNote === null) {
+      data.profileNote = null;
+    } else if (typeof body.profileNote === "string" && body.profileNote.length <= MAX_PROFILE_NOTE_LENGTH) {
+      data.profileNote = body.profileNote.trim() || null;
+    } else {
+      return NextResponse.json(
+        { error: `Note must be ${MAX_PROFILE_NOTE_LENGTH} characters or fewer.` },
+        { status: 400 }
+      );
+    }
+  }
+
   if ("accentColor" in body) {
     if (!hasPlus) {
       return NextResponse.json({ error: "A custom profile color needs Game Hub Plus." }, { status: 400 });
@@ -120,6 +147,8 @@ export async function PATCH(request: NextRequest) {
       avatarDataUrl: true,
       bannerDataUrl: true,
       bio: true,
+      pronouns: true,
+      profileNote: true,
       accentColor: true,
       pinnedCosmeticId: true,
     },

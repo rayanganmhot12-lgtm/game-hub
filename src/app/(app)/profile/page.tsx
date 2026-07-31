@@ -21,6 +21,8 @@ export default async function ProfilePage() {
         initialAvatarDataUrl={user.avatarDataUrl}
         initialBannerDataUrl={user.bannerDataUrl}
         initialBio={user.bio}
+        initialPronouns={user.pronouns}
+        initialProfileNote={user.profileNote}
         initialAccentColor={user.accentColor}
         equippedFrame={user.equippedFrame}
         equippedBanner={user.equippedBanner}

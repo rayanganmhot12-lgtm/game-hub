@@ -10,6 +10,8 @@ const AVATAR_SIZE = 256;
 const BANNER_WIDTH = 600;
 const BANNER_HEIGHT = 180;
 const MAX_BIO_LENGTH = 190;
+const MAX_PRONOUNS_LENGTH = 30;
+const MAX_PROFILE_NOTE_LENGTH = 60;
 const MAX_AVATAR_GIF_BYTES = 1.8 * 1024 * 1024;
 const MAX_BANNER_GIF_BYTES = 2.6 * 1024 * 1024;
 const ACCENT_PRESETS = ["#ff6b00", "#ff2d6b", "#a855f7", "#3b82f6", "#22c55e", "#eab308"];
@@ -58,6 +60,8 @@ export default function ProfileManager({
   initialAvatarDataUrl,
   initialBannerDataUrl,
   initialBio,
+  initialPronouns,
+  initialProfileNote,
   initialAccentColor,
   equippedFrame,
   equippedBanner,
@@ -67,6 +71,8 @@ export default function ProfileManager({
   initialAvatarDataUrl: string | null;
   initialBannerDataUrl: string | null;
   initialBio: string | null;
+  initialPronouns: string | null;
+  initialProfileNote: string | null;
   initialAccentColor: string | null;
   equippedFrame: string | null;
   equippedBanner: string | null;
@@ -80,11 +86,15 @@ export default function ProfileManager({
   const [bannerDataUrl, setBannerDataUrl] = useState(initialBannerDataUrl);
   const [displayName, setDisplayName] = useState(initialDisplayName);
   const [bio, setBio] = useState(initialBio ?? "");
+  const [pronouns, setPronouns] = useState(initialPronouns ?? "");
+  const [profileNote, setProfileNote] = useState(initialProfileNote ?? "");
   const [accentColor, setAccentColor] = useState(initialAccentColor);
   const [savingPhoto, setSavingPhoto] = useState(false);
   const [savingBanner, setSavingBanner] = useState(false);
   const [savingName, setSavingName] = useState(false);
   const [savingBio, setSavingBio] = useState(false);
+  const [savingPronouns, setSavingPronouns] = useState(false);
+  const [savingNote, setSavingNote] = useState(false);
   const [savingColor, setSavingColor] = useState(false);
 
   async function patchProfile(fields: Record<string, unknown>) {
@@ -217,6 +227,34 @@ export default function ProfileManager({
       showToast(err instanceof Error ? err.message : "Couldn't save bio.", "error");
     } finally {
       setSavingBio(false);
+    }
+  }
+
+  async function handleSavePronouns() {
+    if (pronouns.trim() === (initialPronouns ?? "").trim()) return;
+    setSavingPronouns(true);
+    try {
+      await patchProfile({ pronouns: pronouns.trim() || null });
+      showToast("Pronouns updated.", "success");
+      router.refresh();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Couldn't save pronouns.", "error");
+    } finally {
+      setSavingPronouns(false);
+    }
+  }
+
+  async function handleSaveNote() {
+    if (profileNote.trim() === (initialProfileNote ?? "").trim()) return;
+    setSavingNote(true);
+    try {
+      await patchProfile({ profileNote: profileNote.trim() || null });
+      showToast("Note updated.", "success");
+      router.refresh();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Couldn't save note.", "error");
+    } finally {
+      setSavingNote(false);
     }
   }
 
@@ -376,6 +414,48 @@ export default function ProfileManager({
           <button
             onClick={handleSaveBio}
             disabled={savingBio || bio.trim() === (initialBio ?? "").trim()}
+            className="btn-primary !text-xs disabled:opacity-50"
+          >
+            Save
+          </button>
+        </div>
+      </div>
+
+      <div className="panel flex flex-col gap-3 p-6">
+        <label className="text-sm font-semibold text-foreground">Pronouns</label>
+        <p className="text-xs text-muted">Shown under your name on your profile card, e.g. &quot;she/her&quot; or &quot;they/them&quot;.</p>
+        <div className="flex gap-2">
+          <input
+            value={pronouns}
+            onChange={(e) => setPronouns(e.target.value)}
+            maxLength={MAX_PRONOUNS_LENGTH}
+            placeholder="she/her"
+            className="input-field flex-1"
+          />
+          <button
+            onClick={handleSavePronouns}
+            disabled={savingPronouns || pronouns.trim() === (initialPronouns ?? "").trim()}
+            className="btn-primary !text-xs disabled:opacity-50"
+          >
+            Save
+          </button>
+        </div>
+      </div>
+
+      <div className="panel flex flex-col gap-3 p-6">
+        <label className="text-sm font-semibold text-foreground">Custom Note</label>
+        <p className="text-xs text-muted">A short status line under your name — separate from your bio below.</p>
+        <div className="flex gap-2">
+          <input
+            value={profileNote}
+            onChange={(e) => setProfileNote(e.target.value)}
+            maxLength={MAX_PROFILE_NOTE_LENGTH}
+            placeholder="What's on your mind?"
+            className="input-field flex-1"
+          />
+          <button
+            onClick={handleSaveNote}
+            disabled={savingNote || profileNote.trim() === (initialProfileNote ?? "").trim()}
             className="btn-primary !text-xs disabled:opacity-50"
           >
             Save

@@ -211,7 +211,11 @@ export default function FriendProfileModal({
               <CosmeticBadge badgeId={badge} />
               {profile?.tag && <TagChip tag={profile.tag} />}
             </div>
+            {profile?.pronouns && <p className="text-[11px] text-muted">{profile.pronouns}</p>}
             <p className="mt-1 text-xs text-muted">{formatFriendCode(code)}</p>
+            {profile?.profileNote && (
+              <p className="mt-1 max-w-[240px] text-center text-xs italic text-foreground/80">{profile.profileNote}</p>
+            )}
 
             {serverRole && (
               <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5">
