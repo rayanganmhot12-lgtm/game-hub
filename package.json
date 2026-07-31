@@ -48,6 +48,11 @@
   "build": {
     "appId": "com.gamehub.desktop",
     "productName": "Game Hub",
+    "publish": {
+      "provider": "github",
+      "owner": "rayanganmhot12-lgtm",
+      "repo": "game-hub"
+    },
     "directories": {
       "output": "release"
     },
