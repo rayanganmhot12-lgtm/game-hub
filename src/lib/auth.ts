@@ -44,3 +44,13 @@ export function getDisplayName(user: {
   if (steamAccount && !isRawSteamId(steamAccount.displayName)) return steamAccount.displayName;
   return user.displayName ?? user.email.split("@")[0];
 }
+
+// Fetches a user fresh from the DB and shapes it into a SavedAccount entry
+// for the session's savedAccounts list. Shared by login (addAccount) and
+// switch, which both need to snapshot the currently-active user before
+// swapping to a different one.
+export async function getSavedAccountEntry(userId: string) {
+  const user = await prisma.user.findUnique({ where: { id: userId }, include: { accounts: true } });
+  if (!user) return null;
+  return { userId: user.id, email: user.email, displayName: getDisplayName(user) };
+}

@@ -41,7 +41,11 @@ export default function Navbar({ points }: { points: number }) {
   }
 
   async function handleLogout() {
-    await fetch("/api/auth/logout", { method: "POST" });
+    const res = await fetch("/api/auth/logout", { method: "POST" });
+    const data = await res.json().catch(() => ({}));
+    if (data.promoted) {
+      showToast(`Signed out — now using ${data.promoted.displayName}.`, "info");
+    }
     router.push("/");
     router.refresh();
   }

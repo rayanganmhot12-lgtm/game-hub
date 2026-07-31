@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession, type SavedAccount } from "@/lib/session";
-import { getDisplayName } from "@/lib/auth";
+import { getSavedAccountEntry } from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
   const session = await getSession();
@@ -11,6 +11,10 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json().catch(() => null);
   const targetUserId = typeof body?.userId === "string" ? body.userId : "";
+
+  if (targetUserId === session.userId) {
+    return NextResponse.json({ error: "You're already using that account." }, { status: 400 });
+  }
 
   const saved = session.savedAccounts ?? [];
   const target = saved.find((a) => a.userId === targetUserId);
@@ -27,10 +31,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "That account no longer exists." }, { status: 400 });
   }
 
-  const current = await prisma.user.findUnique({ where: { id: session.userId }, include: { accounts: true } });
+  const currentEntry = await getSavedAccountEntry(session.userId);
   const nextSaved: SavedAccount[] = saved.filter((a) => a.userId !== targetUserId);
-  if (current) {
-    nextSaved.push({ userId: current.id, email: current.email, displayName: getDisplayName(current) });
+  if (currentEntry) {
+    nextSaved.push(currentEntry);
   }
 
   session.savedAccounts = nextSaved;

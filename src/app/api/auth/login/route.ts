@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSession, type SavedAccount } from "@/lib/session";
+import { getSession, MAX_SAVED_ACCOUNTS, type SavedAccount } from "@/lib/session";
 import { verifyPassword } from "@/lib/password";
-import { getDisplayName } from "@/lib/auth";
-
-const MAX_SAVED_ACCOUNTS = 5;
+import { getSavedAccountEntry } from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null);
@@ -54,9 +52,9 @@ export async function POST(request: NextRequest) {
 
   const nextSaved: SavedAccount[] = [...saved];
   if (session.userId) {
-    const current = await prisma.user.findUnique({ where: { id: session.userId }, include: { accounts: true } });
-    if (current) {
-      nextSaved.push({ userId: current.id, email: current.email, displayName: getDisplayName(current) });
+    const currentEntry = await getSavedAccountEntry(session.userId);
+    if (currentEntry) {
+      nextSaved.push(currentEntry);
     }
   }
 

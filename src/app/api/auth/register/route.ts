@@ -25,6 +25,7 @@ export async function POST(request: NextRequest) {
 
   const session = await getSession();
   session.userId = user.id;
+  session.savedAccounts = [];
   await session.save();
 
   return NextResponse.json({ ok: true });

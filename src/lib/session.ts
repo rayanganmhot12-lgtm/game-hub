@@ -11,10 +11,12 @@ export interface SessionData {
   userId?: string;
   // Other accounts logged into on this device — lets Switch Accounts swap
   // the active one instantly without a password. Never includes the
-  // current `userId` itself. Capped at 5 entries, enforced in the login
-  // route (not here, since this file has no request context).
+  // current `userId` itself. Capped at MAX_SAVED_ACCOUNTS entries, enforced
+  // in the login route (not here, since this file has no request context).
   savedAccounts?: SavedAccount[];
 }
+
+export const MAX_SAVED_ACCOUNTS = 5;
 
 const sessionOptions = {
   password: process.env.SESSION_SECRET as string,

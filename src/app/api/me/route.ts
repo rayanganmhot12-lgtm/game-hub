@@ -8,7 +8,7 @@ export async function GET() {
   const savedAccounts = session.savedAccounts ?? [];
 
   if (!user) {
-    return NextResponse.json({ user: null, savedAccounts });
+    return NextResponse.json({ user: null, savedAccounts: [] });
   }
 
   return NextResponse.json({

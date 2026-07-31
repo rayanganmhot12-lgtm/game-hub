@@ -137,7 +137,7 @@ export default function SwitchAccountsMenu() {
                   <Check size={13} className="shrink-0 text-accent-bright" />
                 </div>
               )}
-              {me?.savedAccounts.map((acc) => (
+              {me?.savedAccounts?.map((acc) => (
                 <button
                   key={acc.userId}
                   onClick={() => switchTo(acc.userId)}

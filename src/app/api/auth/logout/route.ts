@@ -15,7 +15,7 @@ export async function POST() {
       session.userId = next.userId;
       session.savedAccounts = rest;
       await session.save();
-      return NextResponse.json({ ok: true });
+      return NextResponse.json({ ok: true, promoted: { displayName: next.displayName } });
     }
     saved = rest;
   }
