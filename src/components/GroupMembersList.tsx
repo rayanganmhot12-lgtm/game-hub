@@ -113,7 +113,7 @@ export default function GroupMembersList({
           )}
         </div>
         <span className="truncate text-sm text-foreground">{member.displayName}</span>
-        <CosmeticBadge badgeId={member.badge} />
+        <CosmeticBadge badgeId={profile?.badge ?? member.badge} />
         {tag && member.tagEquipped && <TagChip tag={tag} />}
       </button>
     );

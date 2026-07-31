@@ -389,6 +389,7 @@ export default function GroupChannelsSidebar({
         myDisplayName={myDisplayName}
         avatarDataUrl={myAvatarDataUrl}
         equippedFrame={myEquippedFrame}
+        equippedBadge={myBadge}
       />
 
       {panel === "invite" && (

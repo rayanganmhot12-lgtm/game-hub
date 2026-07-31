@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Mic, MicOff, Headphones, HeadphoneOff, Settings, User } from "lucide-react";
-import { CosmeticFrame } from "@/components/CosmeticFrame";
+import { CosmeticFrame, CosmeticBadge } from "@/components/CosmeticFrame";
 import { useGroupCall } from "@/context/GroupCallContext";
 import { formatFriendCode } from "@/lib/friendCode";
 import FriendProfileModal from "@/components/FriendProfileModal";
@@ -16,11 +16,13 @@ export default function ServerUserPanel({
   myDisplayName,
   avatarDataUrl,
   equippedFrame,
+  equippedBadge,
 }: {
   myCode: string;
   myDisplayName: string;
   avatarDataUrl?: string | null;
   equippedFrame?: string | null;
+  equippedBadge?: string | null;
 }) {
   const { muted, deafened, toggleMuted, toggleDeafen } = useGroupCall();
   const [showProfile, setShowProfile] = useState(false);
@@ -66,6 +68,7 @@ export default function ServerUserPanel({
         >
           {deafened ? <HeadphoneOff size={15} /> : <Headphones size={15} />}
         </button>
+        <CosmeticBadge badgeId={equippedBadge} />
         <Link
           href="/profile"
           className="rounded-lg p-1.5 text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
