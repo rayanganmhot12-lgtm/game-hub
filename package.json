@@ -10,8 +10,7 @@
     "lint": "eslint",
     "desktop": "electron .",
     "build:standalone": "next build && node scripts/prepare-standalone.js",
-    "rebuild:native": "electron-rebuild --force --module-dir .next/standalone --only better-sqlite3",
-    "dist": "npm run build:standalone && npm run rebuild:native && node scripts/prepare-empty-db.js && electron-builder --win"
+    "dist": "npm run build:standalone && node scripts/prepare-empty-db.js && electron-builder --win"
   },
   "dependencies": {
     "@prisma/adapter-better-sqlite3": "^7.8.0",
@@ -56,6 +55,7 @@
     "directories": {
       "output": "release"
     },
+    "afterPack": "scripts/after-pack.js",
     "files": [
       "electron/**/*"
     ],
