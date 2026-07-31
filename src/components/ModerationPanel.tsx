@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ShieldAlert, MessageSquareWarning, VolumeX, Clock, Ban, ShieldCheck, Trash2, RotateCcw, Megaphone } from "lucide-react";
+import { ShieldAlert, MessageSquareWarning, VolumeX, Clock, Ban, ShieldCheck, Trash2, RotateCcw, Megaphone, Send } from "lucide-react";
 import { useToast } from "@/context/ToastContext";
 import { isFirebaseConfigured } from "@/lib/firebase";
 import { normalizeFriendCode, formatFriendCode } from "@/lib/friendCode";
@@ -43,6 +43,7 @@ export default function ModerationPanel({
   const [targetCodeInput, setTargetCodeInput] = useState("");
   const [targetDisplayName, setTargetDisplayName] = useState("");
   const [warningMessage, setWarningMessage] = useState("");
+  const [moderatorMessage, setModeratorMessage] = useState("");
   const [timeoutMinutes, setTimeoutMinutes] = useState(TIMEOUT_OPTIONS[0].minutes);
   const [actions, setActions] = useState(initialActions);
   const [busy, setBusy] = useState(false);
@@ -97,6 +98,25 @@ export default function ModerationPanel({
     }
   }
 
+  async function handleSendMessage() {
+    const code = getTargetCode();
+    if (!code || !moderatorMessage.trim()) {
+      if (!moderatorMessage.trim()) showToast("Write a message.", "error");
+      return;
+    }
+    setBusy(true);
+    try {
+      await sendAnnouncement(code, moderatorMessage.trim(), myDisplayName);
+      await logAction("message", moderatorMessage.trim());
+      showToast("Message sent.", "success");
+      setModeratorMessage("");
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Couldn't send message.", "error");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function handleMute(muted: boolean) {
     const code = getTargetCode();
     if (!code) return;
@@ -123,6 +143,21 @@ export default function ModerationPanel({
       showToast(`User timed out for ${timeoutMinutes} minutes.`, "success");
     } catch (err) {
       showToast(err instanceof Error ? err.message : "Couldn't apply timeout.", "error");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleRemoveTimeout() {
+    const code = getTargetCode();
+    if (!code) return;
+    setBusy(true);
+    try {
+      await setModerationState(code, { timeoutUntil: null });
+      await logAction("remove timeout");
+      showToast("Timeout removed.", "success");
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Couldn't remove timeout.", "error");
     } finally {
       setBusy(false);
     }
@@ -275,6 +310,24 @@ export default function ModerationPanel({
         </div>
       </div>
 
+      <div className="panel p-5">
+        <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
+          <Send size={16} className="text-accent-bright" />
+          Send Message
+        </h2>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <input
+            value={moderatorMessage}
+            onChange={(e) => setModeratorMessage(e.target.value)}
+            placeholder="Message shown as a friendly notification…"
+            className="input-field flex-1"
+          />
+          <button onClick={handleSendMessage} disabled={busy || !isFirebaseConfigured} className="btn-primary">
+            Send Message
+          </button>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="panel p-5">
           <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
@@ -307,9 +360,14 @@ export default function ModerationPanel({
               </option>
             ))}
           </select>
-          <button onClick={handleTimeout} disabled={busy || !isFirebaseConfigured} className="btn-primary w-full !text-xs">
-            Apply Timeout
-          </button>
+          <div className="flex gap-2">
+            <button onClick={handleTimeout} disabled={busy || !isFirebaseConfigured} className="btn-primary flex-1 !text-xs">
+              Apply Timeout
+            </button>
+            <button onClick={handleRemoveTimeout} disabled={busy || !isFirebaseConfigured} className="btn-ghost flex-1 !text-xs">
+              Remove Timeout
+            </button>
+          </div>
         </div>
 
         <div className="panel p-5">

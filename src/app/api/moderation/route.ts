@@ -3,7 +3,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { isAdminEmail } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
 
-const VALID_ACTIONS = ["warn", "mute", "timeout", "ban", "unban", "unmute", "reset"];
+const VALID_ACTIONS = ["warn", "mute", "timeout", "ban", "unban", "unmute", "reset", "message", "remove timeout"];
 
 export async function GET() {
   const user = await getCurrentUser();
