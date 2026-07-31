@@ -1,6 +1,8 @@
-const { app, BrowserWindow, Tray, Menu, nativeImage, session, shell } = require("electron");
+const { app, BrowserWindow, Tray, Menu, nativeImage, session, shell, dialog } = require("electron");
 const path = require("path");
 const http = require("http");
+const fs = require("fs");
+const crypto = require("crypto");
 const { spawn } = require("child_process");
 
 require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
@@ -36,6 +38,23 @@ function waitForServer(url, timeoutMs = 60000) {
   });
 }
 
+// Every packaged install gets its own persistent, randomly-generated
+// SESSION_SECRET on first launch — never the developer's own value from a
+// bundled .env, since sharing one secret across every friend's copy would
+// let any install decrypt or forge another's session cookie.
+function getOrCreateSessionSecret() {
+  const secretsPath = path.join(app.getPath("userData"), "secrets.json");
+  try {
+    const existing = JSON.parse(fs.readFileSync(secretsPath, "utf8"));
+    if (existing.sessionSecret) return existing.sessionSecret;
+  } catch {
+    // Missing or corrupt — fall through and generate a fresh one.
+  }
+  const sessionSecret = crypto.randomBytes(32).toString("hex");
+  fs.writeFileSync(secretsPath, JSON.stringify({ sessionSecret }));
+  return sessionSecret;
+}
+
 function startServer() {
   const isPackaged = app.isPackaged;
 
@@ -56,6 +75,7 @@ function startServer() {
       ...process.env,
       PORT: String(PORT),
       NODE_ENV: "production",
+      SESSION_SECRET: getOrCreateSessionSecret(),
       // The packaged app has no separate Node.js binary bundled — this tells
       // Electron's own binary to behave as plain Node instead of launching a
       // second GUI instance when we spawn it to run server.js.
