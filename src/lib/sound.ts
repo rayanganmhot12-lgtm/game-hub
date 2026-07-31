@@ -1,0 +1,72 @@
+let audioContext: AudioContext | null = null;
+
+function getContext(): AudioContext | null {
+  if (typeof window === "undefined") return null;
+  if (!audioContext) {
+    const Ctor = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!Ctor) return null;
+    audioContext = new Ctor();
+  }
+  if (audioContext.state === "suspended") {
+    audioContext.resume().catch(() => {});
+  }
+  return audioContext;
+}
+
+function tone(freq: number, duration: number, volume: number, type: OscillatorType = "sine", delaySec = 0) {
+  const ctx = getContext();
+  if (!ctx) return;
+  const startAt = ctx.currentTime + delaySec;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(volume, startAt);
+  gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(startAt);
+  osc.stop(startAt + duration);
+}
+
+export function playClickSound() {
+  tone(720, 0.06, 0.05, "sine");
+}
+
+export function playHoverSound() {
+  tone(1000, 0.03, 0.02, "sine");
+}
+
+export function playSuccessSound() {
+  [660, 880, 1100].forEach((freq, i) => tone(freq, 0.14, 0.05, "sine", i * 0.08));
+}
+
+export function playWarningSound() {
+  [880, 660].forEach((freq, i) => tone(freq, 0.5, 0.07, "square", i * 0.5));
+}
+
+// Timed to line up with the 7s Plus purchase celebration (PlusCelebration.tsx):
+// a rising launch whoosh as the rocket climbs (~2.2s-3.3s), a percussive
+// "boom" as it explodes center-screen (~3.3s), then a sparkly ascending
+// chime as the "PLUS" text reveals (~3.5s).
+export function playPlusFanfare() {
+  const rocketLaunchAt = 2.2;
+  const explodeAt = 3.3;
+  const textAt = 3.5;
+  [220, 300, 400, 520, 650, 800].forEach((freq, i) => tone(freq, 0.18, 0.035, "sawtooth", rocketLaunchAt + i * 0.16));
+  tone(80, 0.5, 0.11, "square", explodeAt);
+  tone(55, 0.55, 0.09, "sine", explodeAt);
+  [660, 880, 1100, 1320, 1568].forEach((freq, i) => tone(freq, 0.22, 0.05, "sine", textAt + i * 0.09));
+}
+
+// Loops a two-note ring burst every 2s until the returned function is called
+// (call answered, declined, or hung up).
+export function startRingtone(): () => void {
+  function ringOnce() {
+    tone(760, 0.25, 0.045, "sine", 0);
+    tone(920, 0.25, 0.045, "sine", 0.3);
+  }
+  ringOnce();
+  const interval = setInterval(ringOnce, 2000);
+  return () => clearInterval(interval);
+}
