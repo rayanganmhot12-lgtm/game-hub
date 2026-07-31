@@ -46,6 +46,12 @@ next-env.d.ts
 # user-uploaded playlist audio files
 /uploads/
 
+# scratch git worktrees used for isolated feature work
+/.worktrees/
+
+# subagent-driven-development scratch workspace (ledgers, briefs, reports)
+/.superpowers/
+
 # local SQLite database — contains real account data (password hashes,
 # synced game libraries, etc.), never belongs in version control. The
 # trailing * also catches ad-hoc backups like dev.db.backup-2026-... .
