@@ -10,6 +10,7 @@ import SoundToggle from "@/components/SoundToggle";
 import NotificationBell from "@/components/NotificationBell";
 import { useToast } from "@/context/ToastContext";
 import { runSync, notifyNewAchievements } from "@/lib/syncClient";
+import { version as appVersion } from "../../package.json";
 
 export default function Navbar({ points }: { points: number }) {
   const router = useRouter();
@@ -66,6 +67,10 @@ export default function Navbar({ points }: { points: number }) {
           <Gamepad2 className="glow-accent-text" size={19} />
         </motion.div>
         <span className="text-lg font-bold tracking-tight text-gradient">GameHub</span>
+        <span className="rounded-full border border-accent/40 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent-bright">
+          Beta
+        </span>
+        <span className="text-xs text-muted">v{appVersion}</span>
       </Link>
 
       <div className="flex items-center gap-2">
