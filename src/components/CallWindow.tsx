@@ -78,6 +78,29 @@ function VideoTile({ tile }: { tile: Tile }) {
       ) : (
         <ProfileAvatar code={tile.code} displayName={tile.displayName} size={56} />
       )}
+      {/* Audio playback must not depend on the video-vs-avatar branch above:
+          for a tile that should carry its own audio (tile.muted === false —
+          only the 1:1 direct peer tile; local/group tiles are always
+          muted: true), the <video> element only exists while `live` is true,
+          so whenever the camera is off (the default/majority state for any
+          call) there'd be no audio path at all. This separate, always-
+          available sink covers that gap. It only renders while `!live`
+          specifically to avoid playing the same audio twice: once `live` is
+          true the <video> above is already mounted with muted={false} and
+          playing this exact stream's audio track — 1:1 calls put both audio
+          and video on one shared MediaStream (see videoCall.ts's
+          addVideoTrackAndRenegotiate, which adds the camera track to the
+          SAME local stream passed to pc.addTrack, so the remote side's
+          ontrack event delivers both tracks on one stream object) — so
+          mounting this unconditionally would double that track's audio. */}
+      {!tile.muted && tile.stream && !live && (
+        <audio
+          autoPlay
+          ref={(el) => {
+            if (el && el.srcObject !== tile.stream) el.srcObject = tile.stream;
+          }}
+        />
+      )}
       <span className="absolute bottom-1 left-1.5 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white">
         {tile.displayName}
       </span>
