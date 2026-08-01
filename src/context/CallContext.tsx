@@ -208,7 +208,7 @@ export function CallProvider({ myCode, myDisplayName, children }: { myCode: stri
 
     const unsubOffer = listenForOffer(convId, async (sdp) => {
       if (!sdp || !isNewRemoteOffer(pc, sdp)) return;
-      if (pc.signalingState !== "stable" && pc.signalingState !== "have-local-offer") return;
+      if (pc.signalingState !== "stable") return;
       await pc.setRemoteDescription(new RTCSessionDescription(sdp));
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
