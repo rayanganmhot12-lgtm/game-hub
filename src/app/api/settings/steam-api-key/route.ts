@@ -24,9 +24,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  const body = await request.json();
-  const apiKey = typeof body.apiKey === "string" ? body.apiKey.trim() : "";
-  if (!apiKey) {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Enter your Steam API key." }, { status: 400 });
+  }
+
+  if (typeof body !== "object" || body === null) {
+    return NextResponse.json({ error: "Enter your Steam API key." }, { status: 400 });
+  }
+
+  const apiKey = typeof (body as Record<string, unknown>).apiKey === "string" ? ((body as Record<string, unknown>).apiKey as string).trim() : "";
+  if (!apiKey || apiKey.length < 8) {
     return NextResponse.json({ error: "Enter your Steam API key." }, { status: 400 });
   }
 
