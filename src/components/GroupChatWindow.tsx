@@ -38,6 +38,7 @@ import { listenForReactions, toggleReaction, type ReactionMap } from "@/lib/reac
 import { getModerationState, isRestricted } from "@/lib/moderationRealtime";
 import { useToast } from "@/context/ToastContext";
 import { CosmeticBadge } from "@/components/CosmeticFrame";
+import { fetchProfile, type PublicProfile } from "@/lib/profileRealtime";
 import FriendProfileModal from "@/components/FriendProfileModal";
 import MessageReactions from "@/components/MessageReactions";
 import GroupChannelsSidebar, { DEFAULT_CHANNELS } from "@/components/GroupChannelsSidebar";
@@ -108,7 +109,11 @@ function renderMessageContent(
         const found = byMemberName.get(part.slice(1).toLowerCase());
         if (found) {
           return (
-            <span key={i} className="rounded bg-accent/20 px-1 font-medium text-accent-bright">
+            // A solid accent background with dark text stays legible across
+            // every theme — text-accent-bright on a semi-transparent accent
+            // background (the old style) collapsed into near-identical hues
+            // on themes like Dark Red, making mentions unreadable.
+            <span key={i} className="rounded bg-accent-bright px-1 font-medium text-black">
               {part}
             </span>
           );
@@ -253,8 +258,10 @@ export default function GroupChatWindow({
   const [lastReadMap, setLastReadMap] = useState<Record<string, number>>({});
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [profiles, setProfiles] = useState<Record<string, PublicProfile>>({});
   const bottomRef = useRef<HTMLDivElement>(null);
   const membersRef = useRef(members);
+  const fetchedProfileCodesRef = useRef<Set<string>>(new Set());
   const messageInputRef = useRef<HTMLInputElement>(null);
   const attachInputRef = useRef<HTMLInputElement>(null);
   const lastTypingSentRef = useRef(0);
@@ -263,6 +270,19 @@ export default function GroupChatWindow({
   useEffect(() => {
     return listenForGroupChannels(groupId, setChannels);
   }, [groupId]);
+
+  useEffect(() => {
+    // Each member's photo lives in their own installation's published
+    // profile, not this server's roster mirror — fetch it once per member
+    // seen, same one-shot lookup GroupMembersList already uses.
+    for (const m of members) {
+      if (fetchedProfileCodesRef.current.has(m.memberCode)) continue;
+      fetchedProfileCodesRef.current.add(m.memberCode);
+      fetchProfile(m.memberCode).then((profile) => {
+        if (profile) setProfiles((prev) => ({ ...prev, [m.memberCode]: profile }));
+      });
+    }
+  }, [members]);
 
   useEffect(() => {
     return listenForGroupTag(groupId, setTag);
@@ -782,8 +802,35 @@ export default function GroupChatWindow({
                         }}
                         title="View profile"
                       >
-                        <Avatar name={senderName} size={26} />
+                        {profiles[m.senderCode]?.avatarDataUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element -- data URI, not an optimizable remote/static asset
+                          <img
+                            src={profiles[m.senderCode].avatarDataUrl ?? undefined}
+                            alt={senderName}
+                            width={26}
+                            height={26}
+                            className="h-[26px] w-[26px] rounded-full object-cover"
+                          />
+                        ) : (
+                          <Avatar name={senderName} size={26} />
+                        )}
                       </button>
+                    )}
+                    {isMine && (
+                      <span className="shrink-0" title={myDisplayName}>
+                        {myAvatarDataUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element -- data URI, not an optimizable remote/static asset
+                          <img
+                            src={myAvatarDataUrl}
+                            alt={myDisplayName}
+                            width={26}
+                            height={26}
+                            className="h-[26px] w-[26px] rounded-full object-cover"
+                          />
+                        ) : (
+                          <Avatar name={myDisplayName} size={26} />
+                        )}
+                      </span>
                     )}
                     <div className={`flex max-w-[75%] flex-col ${isMine ? "items-end" : "items-start"}`}>
                       {!isMine && (

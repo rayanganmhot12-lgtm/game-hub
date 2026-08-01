@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { X, Check, Camera, Users, Search, Loader2 } from "lucide-react";
 import { useToast } from "@/context/ToastContext";
-import Avatar from "@/components/Avatar";
+import ProfileAvatar from "@/components/ProfileAvatar";
 import {
   sendGroupInvite,
   joinGroupRoster,
@@ -294,7 +294,7 @@ export default function CreateServerModal({
                               : "border-border bg-surface-2/30 text-muted hover:border-accent/30 hover:text-foreground"
                           }`}
                         >
-                          {selected ? <Check size={12} /> : <Avatar name={f.friendDisplayName} size={16} />}
+                          {selected ? <Check size={12} /> : <ProfileAvatar code={f.friendCode} displayName={f.friendDisplayName} size={16} />}
                           {f.friendDisplayName}
                         </button>
                       );

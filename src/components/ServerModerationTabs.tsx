@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Trash2, Plus, UserX, Ban as BanIcon, Camera } from "lucide-react";
 import { useToast } from "@/context/ToastContext";
-import Avatar from "@/components/Avatar";
+import ProfileAvatar from "@/components/ProfileAvatar";
 import { TAG_COLORS } from "@/components/GroupChannelsSidebar";
 import type { GroupMemberEntry } from "@/components/GroupChannelsSidebar";
 import {
@@ -84,7 +84,7 @@ export function MembersTab({
       <div className="flex flex-col gap-1">
         {members.map((m) => (
           <div key={m.code} className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-surface-2/40">
-            <Avatar name={m.displayName} size={28} />
+            <ProfileAvatar code={m.code} displayName={m.displayName} size={28} />
             <span className="min-w-0 flex-1 truncate text-sm text-foreground">{m.displayName}</span>
             {roles.length > 0 && (
               <select

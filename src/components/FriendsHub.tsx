@@ -19,7 +19,7 @@ import {
 import { useToast } from "@/context/ToastContext";
 import { useCall } from "@/context/CallContext";
 import { CosmeticBadge } from "@/components/CosmeticFrame";
-import Avatar from "@/components/Avatar";
+import ProfileAvatar from "@/components/ProfileAvatar";
 import EmptyState from "@/components/EmptyState";
 import FriendProfileModal from "@/components/FriendProfileModal";
 import CreateServerModal from "@/components/CreateServerModal";
@@ -424,7 +424,7 @@ export default function FriendsHub({
                       className="card-hover flex items-center justify-between rounded-xl border border-border bg-surface-2/20 p-3"
                     >
                       <span className="flex items-center gap-2.5 text-sm text-foreground">
-                        <Avatar name={req.fromDisplayName} />
+                        <ProfileAvatar code={req.fromCode} displayName={req.fromDisplayName} />
                         {req.fromDisplayName}
                         <CosmeticBadge badgeId={req.fromBadge} />
                       </span>
@@ -544,7 +544,7 @@ export default function FriendsHub({
                         title="View profile"
                       >
                         <div className="relative shrink-0">
-                          <Avatar name={friend.friendDisplayName} size={40} />
+                          <ProfileAvatar code={friend.friendCode} displayName={friend.friendDisplayName} size={40} />
                           <span
                             className={`absolute -bottom-0.5 -right-0.5 block h-3 w-3 rounded-full ring-2 ring-surface ${
                               onlineMap[friend.friendCode] ? "bg-emerald-400" : "bg-surface-2"
@@ -633,7 +633,7 @@ export default function FriendsHub({
                     className="flex items-center gap-2.5 text-left transition-opacity hover:opacity-80"
                   >
                     <div className="relative shrink-0">
-                      <Avatar name={f.friendDisplayName} size={32} />
+                      <ProfileAvatar code={f.friendCode} displayName={f.friendDisplayName} size={32} />
                       <span className="absolute -bottom-0.5 -right-0.5 block h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-surface" />
                     </div>
                     <span className="min-w-0">

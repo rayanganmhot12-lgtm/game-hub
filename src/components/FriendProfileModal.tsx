@@ -8,7 +8,7 @@ import { CosmeticFrame, CosmeticBadge, CosmeticBanner, CosmeticPreview } from "@
 import { TagChip } from "@/components/ServerChips";
 import { RoleChip } from "@/components/ServerModerationTabs";
 import SwitchAccountsMenu from "@/components/SwitchAccountsMenu";
-import Avatar from "@/components/Avatar";
+import ProfileAvatar from "@/components/ProfileAvatar";
 import { useToast } from "@/context/ToastContext";
 import { fetchProfile, type PublicProfile } from "@/lib/profileRealtime";
 import {
@@ -301,7 +301,7 @@ export default function FriendProfileModal({
                 <div className="mb-3 flex -space-x-2">
                   {callParticipants.slice(0, 6).map((p) => (
                     <div key={p.code} className="ring-2 ring-surface rounded-full" title={p.displayName}>
-                      <Avatar name={p.displayName} size={28} />
+                      <ProfileAvatar code={p.code} displayName={p.displayName} size={28} />
                     </div>
                   ))}
                 </div>

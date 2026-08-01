@@ -57,9 +57,9 @@ import {
   listenForGroupCreator,
   deleteGroupEverywhere,
 } from "@/lib/groupRealtime";
-import { JoinVoiceButton } from "@/components/GroupCallBar";
+import { useGroupCall } from "@/context/GroupCallContext";
 import ServerUserPanel from "@/components/ServerUserPanel";
-import Avatar from "@/components/Avatar";
+import ProfileAvatar from "@/components/ProfileAvatar";
 import {
   BANNER_SWATCHES,
   bannerClassName,
@@ -139,6 +139,8 @@ export default function GroupChannelsSidebar({
 }) {
   const router = useRouter();
   const { showToast } = useToast();
+  const { activeGroupCall, joinGroupCall } = useGroupCall();
+  const [joiningVoice, setJoiningVoice] = useState(false);
   const [liveName, setLiveName] = useState(groupName);
   const [icon, setIcon] = useState<string | null>(null);
   const [profile, setProfile] = useState<GroupProfile>({});
@@ -249,14 +251,40 @@ export default function GroupChannelsSidebar({
     router.refresh();
   }
 
+  async function handleJoinVoice() {
+    if (activeGroupCall) return;
+    setJoiningVoice(true);
+    try {
+      await joinGroupCall(groupId, liveName);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Couldn't join voice.", "error");
+    } finally {
+      setJoiningVoice(false);
+    }
+  }
+
   function renderChannelRow(channel: GroupChannel & { id: string }) {
     const active = channel.type === "text" && channel.id === activeChannelId;
     if (channel.type === "voice") {
+      const connectedHere = activeGroupCall?.groupId === groupId;
+      const inOtherCall = Boolean(activeGroupCall) && !connectedHere;
       return (
-        <div key={channel.id} className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm text-muted">
+        <button
+          key={channel.id}
+          type="button"
+          onClick={handleJoinVoice}
+          disabled={joiningVoice || connectedHere || inOtherCall}
+          title={inOtherCall ? "Leave your current voice call first" : connectedHere ? "You're connected" : "Join voice"}
+          className={`flex w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-left text-sm transition-colors disabled:cursor-default ${
+            connectedHere
+              ? "bg-accent/15 text-accent-bright"
+              : "text-muted hover:bg-surface-2/30 hover:text-foreground disabled:hover:bg-transparent"
+          }`}
+        >
           <Volume2 size={16} className="shrink-0" />
           <span className="flex-1 truncate">{channel.name}</span>
-        </div>
+          {connectedHere && <span className="text-[10px] font-semibold uppercase tracking-wide">Connected</span>}
+        </button>
       );
     }
     const unread = !active && !!unreadChannelIds?.has(channel.id);
@@ -274,8 +302,6 @@ export default function GroupChannelsSidebar({
       </button>
     );
   }
-
-  const hasVoiceChannel = displayChannels.some((c) => c.type === "voice");
 
   return (
     <div className="flex h-full w-60 shrink-0 flex-col border-r border-border/60 bg-surface/40">
@@ -377,11 +403,6 @@ export default function GroupChannelsSidebar({
           );
         })}
 
-        {hasVoiceChannel && (
-          <div className="px-2 pt-1">
-            <JoinVoiceButton groupId={groupId} groupName={liveName} />
-          </div>
-        )}
       </div>
 
       <ServerUserPanel
@@ -606,7 +627,7 @@ function InvitePanel({
               {friends.map((f) => (
                 <div key={f.id} className="flex items-center justify-between rounded-lg px-2 py-1.5 hover:bg-surface-2/40">
                   <span className="flex items-center gap-2 text-sm text-foreground">
-                    <Avatar name={f.friendDisplayName} size={24} />
+                    <ProfileAvatar code={f.friendCode} displayName={f.friendDisplayName} size={24} />
                     {f.friendDisplayName}
                   </span>
                   <button

@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { Send } from "lucide-react";
 import { isFirebaseConfigured } from "@/lib/firebase";
 import { CosmeticBadge } from "@/components/CosmeticFrame";
-import Avatar from "@/components/Avatar";
+import ProfileAvatar from "@/components/ProfileAvatar";
 import { conversationId, sendChatMessage, listenForChatMessages, removeChatMessage } from "@/lib/chatRealtime";
 import { listenForReactions, toggleReaction, type ReactionMap } from "@/lib/reactionsRealtime";
 import { listenToPresence } from "@/lib/presence";
@@ -114,7 +114,7 @@ export default function ChatWindow({
     <div className="panel flex flex-1 flex-col overflow-hidden">
       <div className="flex items-center gap-2.5 border-b border-border p-4">
         <div className="relative">
-          <Avatar name={peerDisplayName} size={30} />
+          <ProfileAvatar code={peerCode} displayName={peerDisplayName} size={30} />
           <span
             className={`absolute -bottom-0.5 -right-0.5 block h-2.5 w-2.5 rounded-full ring-2 ring-surface ${
               online ? "bg-emerald-400" : "bg-surface-2"
