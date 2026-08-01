@@ -4,8 +4,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Gamepad2, LogOut, RefreshCw, Gem, Tv } from "lucide-react";
-import ThemeToggle from "@/components/ThemeToggle";
+import { Gamepad2, LogOut, RefreshCw, Gem, Tv, Palette } from "lucide-react";
 import SoundToggle from "@/components/SoundToggle";
 import NotificationBell from "@/components/NotificationBell";
 import { useToast } from "@/context/ToastContext";
@@ -74,7 +73,10 @@ export default function Navbar({ points }: { points: number }) {
       </Link>
 
       <div className="flex items-center gap-2">
-        <ThemeToggle />
+        <Link href="/theme-editor" className="btn-ghost" title="Theme Editor">
+          <Palette size={15} />
+          <span className="hidden sm:inline">Theme Editor</span>
+        </Link>
         <SoundToggle />
         <NotificationBell />
 

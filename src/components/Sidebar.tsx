@@ -68,7 +68,7 @@ export default function Sidebar({
           );
         })}
       </nav>
-      <div className="pb-24">
+      <div className="mt-6 pb-24">
         <UserPanel
           displayName={displayName}
           avatarDataUrl={avatarDataUrl}

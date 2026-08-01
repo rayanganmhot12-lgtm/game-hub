@@ -38,7 +38,7 @@ export default async function GroupChatPage({ params }: { params: Promise<{ grou
   });
 
   return (
-    <div className="flex h-[calc(100vh-8rem)] flex-col gap-3">
+    <div className="flex h-[calc(100vh-11rem)] flex-col gap-3 md:h-[calc(100vh-11.5rem)]">
       <Link href="/friends" className="flex w-fit items-center gap-2 text-sm text-muted hover:text-foreground">
         <ArrowLeft size={16} />
         Back to Friends
