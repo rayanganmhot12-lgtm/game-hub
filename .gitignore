@@ -57,3 +57,7 @@ next-env.d.ts
 # trailing * also catches ad-hoc backups like dev.db.backup-2026-... .
 *.db*
 prisma/dev.db*
+
+# per-install settings written by the in-app Steam API key panel (dev-mode
+# fallback path only — packaged builds write this into userData instead)
+/settings.json
