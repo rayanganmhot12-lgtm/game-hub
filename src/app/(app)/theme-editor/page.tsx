@@ -7,8 +7,6 @@ const PRESET_SWATCHES = ["#ff6b00", "#ff1f2d", "#a855f7", "#14b8a6", "#3b82f6", 
 
 export default function ThemeEditorPage() {
   const {
-    theme,
-    setTheme,
     customAccent,
     setCustomAccent,
     bgIntensity,
@@ -33,27 +31,6 @@ export default function ThemeEditorPage() {
           <Palette size={16} className="text-accent-bright" />
           Accent Color
         </h2>
-
-        <div className="mb-3 flex gap-2">
-          <button
-            onClick={() => {
-              setCustomAccent(null);
-              setTheme("neon-orange");
-            }}
-            className={`btn-ghost ${theme === "neon-orange" && !customAccent ? "border-accent/50 text-foreground" : ""}`}
-          >
-            Neon Orange
-          </button>
-          <button
-            onClick={() => {
-              setCustomAccent(null);
-              setTheme("dark-red");
-            }}
-            className={`btn-ghost ${theme === "dark-red" && !customAccent ? "border-accent/50 text-foreground" : ""}`}
-          >
-            Dark Red
-          </button>
-        </div>
 
         <div className="flex flex-wrap items-center gap-3">
           <input
