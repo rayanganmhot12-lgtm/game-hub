@@ -17,10 +17,10 @@ export default function UserPanel({
   equippedBadge: string | null;
 }) {
   return (
-    <div className="flex items-center gap-3 border-t border-border/60 bg-surface-2/40 px-3 py-4">
+    <div className="flex items-center gap-2.5 border-t border-border/60 bg-surface-2/40 px-3 py-3">
       <Link
         href="/profile"
-        className="flex min-w-0 flex-1 items-center gap-4 rounded-lg p-2 transition-colors hover:bg-surface-2/60"
+        className="flex min-w-0 flex-1 items-center gap-3 rounded-lg p-1.5 transition-colors hover:bg-surface-2/60"
         title="Edit profile"
       >
         <CosmeticFrame frameId={equippedFrame}>
@@ -29,25 +29,25 @@ export default function UserPanel({
             <img
               src={avatarDataUrl}
               alt={displayName}
-              width={64}
-              height={64}
-              className="h-16 w-16 shrink-0 rounded-full object-cover"
+              width={48}
+              height={48}
+              className="h-12 w-12 shrink-0 rounded-full object-cover"
             />
           ) : (
-            <div className="icon-badge h-16 w-16 shrink-0">
-              <User size={28} />
+            <div className="icon-badge h-12 w-12 shrink-0">
+              <User size={20} />
             </div>
           )}
         </CosmeticFrame>
         <div className="min-w-0">
-          <p className="truncate text-xl font-medium text-foreground">{displayName}</p>
-          <p className="truncate text-sm text-muted">{formatFriendCode(friendCode)}</p>
+          <p className="truncate text-base font-medium text-foreground">{displayName}</p>
+          <p className="truncate text-xs text-muted">{formatFriendCode(friendCode)}</p>
         </div>
       </Link>
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="flex shrink-0 items-center gap-1.5">
         <CosmeticBadge badgeId={equippedBadge} />
-        <Link href="/profile" className="btn-ghost !p-2.5" title="Profile settings">
-          <Settings size={26} />
+        <Link href="/profile" className="btn-ghost !p-2" title="Profile settings">
+          <Settings size={20} />
         </Link>
       </div>
     </div>
