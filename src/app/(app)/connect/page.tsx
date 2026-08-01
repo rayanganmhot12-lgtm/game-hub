@@ -3,6 +3,7 @@ import { getCurrentUser, isRawSteamId } from "@/lib/auth";
 import PlatformBadge from "@/components/PlatformBadge";
 import ConnectSuccessSound from "@/components/ConnectSuccessSound";
 import ErrorToastFromQuery from "@/components/ErrorToastFromQuery";
+import SteamApiKeyPanel from "@/components/SteamApiKeyPanel";
 
 const ERROR_MESSAGES: Record<string, string> = {
   steam_auth_failed: "Steam login failed to verify. Please try again.",
@@ -55,6 +56,8 @@ export default async function ConnectPage() {
             Coming soon
           </span>
         </div>
+
+        <SteamApiKeyPanel />
       </div>
     </div>
   );
