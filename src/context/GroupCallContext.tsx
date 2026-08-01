@@ -20,6 +20,13 @@ import {
 import { getModerationState, isRestricted } from "@/lib/moderationRealtime";
 import { isFirebaseConfigured } from "@/lib/firebase";
 import { acquireCameraTrack, addVideoTrackAndRenegotiate, isNewRemoteOffer } from "@/lib/videoCall";
+import { isDirectCallActive, markGroupCallActive } from "@/lib/callActivity";
+
+// The mirror of CallContext's guard: CallWindow renders one call mode and
+// gives group calls priority, so a 1:1 call running underneath a group call
+// would be invisible, inaudible and impossible to hang up. The two call types
+// stay mutually exclusive at the entry points.
+const IN_DIRECT_CALL_ERROR = "You're already in a call — hang up first to join a voice channel.";
 
 interface GroupCallPeer {
   code: string;
@@ -225,45 +232,60 @@ export function GroupCallProvider({
     setPeers([]);
     setRemoteStreams({});
     setActiveGroupCall(null);
+    markGroupCallActive(false);
     // Mute/deafen are treated as a standing preference, not per-call state —
     // matches Discord, where leaving a call doesn't silently unmute you.
   }, [myCode, disconnectFromPeer]);
 
   const joinGroupCall = useCallback(
     async (groupId: string, groupName: string) => {
-      const state = await getModerationState(myCode);
-      const { restricted, reason } = isRestricted(state);
-      if (restricted) throw new Error(reason);
-      if (!isFirebaseConfigured) throw new Error("Voice calls aren't set up yet — see the README for Firebase setup.");
+      if (isDirectCallActive()) throw new Error(IN_DIRECT_CALL_ERROR);
+      // Claim the slot before the first await — getUserMedia can sit on a
+      // browser permission prompt long enough for the user to also accept an
+      // incoming 1:1 call, which is exactly what this guard prevents.
+      markGroupCallActive(true);
+      let established = false;
+      try {
+        const state = await getModerationState(myCode);
+        const { restricted, reason } = isRestricted(state);
+        if (restricted) throw new Error(reason);
+        if (!isFirebaseConfigured) throw new Error("Voice calls aren't set up yet — see the README for Firebase setup.");
 
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      // Carry the standing mute preference into the fresh track — otherwise
-      // a pre-set mute would silently stop applying on your next call.
-      stream.getAudioTracks().forEach((track) => (track.enabled = !mutedRef.current));
-      localStreamRef.current = stream;
-      setLocalStream(stream);
-      groupIdRef.current = groupId;
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // Carry the standing mute preference into the fresh track — otherwise
+        // a pre-set mute would silently stop applying on your next call.
+        stream.getAudioTracks().forEach((track) => (track.enabled = !mutedRef.current));
+        localStreamRef.current = stream;
+        setLocalStream(stream);
+        groupIdRef.current = groupId;
 
-      await joinGroupCallRealtime(groupId, myCode, myDisplayName);
-      await setCallPresence(myCode, groupId, groupName);
-      setActiveGroupCall({ groupId, groupName, sessionId: crypto.randomUUID() });
+        await joinGroupCallRealtime(groupId, myCode, myDisplayName);
+        await setCallPresence(myCode, groupId, groupName);
+        setActiveGroupCall({ groupId, groupName, sessionId: crypto.randomUUID() });
+        established = true;
 
-      unsubParticipantsRef.current = listenForGroupCallParticipants(
-        groupId,
-        (participants: Array<GroupCallParticipant & { code: string }>) => {
-          const codes = new Set(participants.map((p) => p.code));
-          setPeers(participants.filter((p) => p.code !== myCode).map((p) => ({ code: p.code, displayName: p.displayName })));
+        unsubParticipantsRef.current = listenForGroupCallParticipants(
+          groupId,
+          (participants: Array<GroupCallParticipant & { code: string }>) => {
+            const codes = new Set(participants.map((p) => p.code));
+            setPeers(participants.filter((p) => p.code !== myCode).map((p) => ({ code: p.code, displayName: p.displayName })));
 
-          for (const p of participants) {
-            if (p.code !== myCode && !peerConnectionsRef.current.has(p.code)) {
-              connectToPeer(p.code);
+            for (const p of participants) {
+              if (p.code !== myCode && !peerConnectionsRef.current.has(p.code)) {
+                connectToPeer(p.code);
+              }
+            }
+            for (const code of [...peerConnectionsRef.current.keys()]) {
+              if (!codes.has(code)) disconnectFromPeer(code);
             }
           }
-          for (const code of [...peerConnectionsRef.current.keys()]) {
-            if (!codes.has(code)) disconnectFromPeer(code);
-          }
-        }
-      );
+        );
+      } catch (err) {
+        // Release the claim only if no call actually came up — once
+        // setActiveGroupCall has run, leaveGroupCall owns releasing it.
+        if (!established) markGroupCallActive(false);
+        throw err;
+      }
     },
     [myCode, myDisplayName, connectToPeer, disconnectFromPeer]
   );

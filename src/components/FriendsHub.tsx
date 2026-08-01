@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/context/ToastContext";
 import { useCall } from "@/context/CallContext";
+import { useGroupCall } from "@/context/GroupCallContext";
 import { CosmeticBadge } from "@/components/CosmeticFrame";
 import ProfileAvatar from "@/components/ProfileAvatar";
 import EmptyState from "@/components/EmptyState";
@@ -104,6 +105,7 @@ export default function FriendsHub({
 }) {
   const { showToast } = useToast();
   const { startCall, activeCall, incomingCall } = useCall();
+  const { activeGroupCall } = useGroupCall();
 
   const [friends, setFriends] = useState(initialFriends);
   const [groups, setGroups] = useState(initialGroups);
@@ -266,6 +268,14 @@ export default function FriendsHub({
     }
     if (activeCall || incomingCall) {
       showToast("You're already in a call.", "error");
+      return;
+    }
+    // A group call and a 1:1 call can't run at once — CallWindow renders only
+    // one mode (group wins), so the 1:1 call would have no tile, no audio sink
+    // and no hang-up button. startCall() refuses this too; checking here just
+    // gets the message out without the round-trip.
+    if (activeGroupCall) {
+      showToast("You're already in a voice channel — leave it first to start a call.", "error");
       return;
     }
     try {

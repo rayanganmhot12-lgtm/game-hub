@@ -58,6 +58,7 @@ import {
   deleteGroupEverywhere,
 } from "@/lib/groupRealtime";
 import { useGroupCall } from "@/context/GroupCallContext";
+import { useCall } from "@/context/CallContext";
 import ServerUserPanel from "@/components/ServerUserPanel";
 import ProfileAvatar from "@/components/ProfileAvatar";
 import {
@@ -140,6 +141,7 @@ export default function GroupChannelsSidebar({
   const router = useRouter();
   const { showToast } = useToast();
   const { activeGroupCall, joinGroupCall } = useGroupCall();
+  const { activeCall } = useCall();
   const [joiningVoice, setJoiningVoice] = useState(false);
   const [liveName, setLiveName] = useState(groupName);
   const [icon, setIcon] = useState<string | null>(null);
@@ -253,6 +255,14 @@ export default function GroupChannelsSidebar({
 
   async function handleJoinVoice() {
     if (activeGroupCall) return;
+    // A 1:1 call and a group call can't run at once — CallWindow renders only
+    // one mode, and group calls win, which would leave the friend call with no
+    // tile, no audio sink and no hang-up button. joinGroupCall() refuses this
+    // too; checking here just gets the message out without the round-trip.
+    if (activeCall) {
+      showToast("You're already in a call — hang up first to join a voice channel.", "error");
+      return;
+    }
     setJoiningVoice(true);
     try {
       await joinGroupCall(groupId, liveName);

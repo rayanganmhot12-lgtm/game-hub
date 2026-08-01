@@ -36,11 +36,23 @@ interface Tile {
 // signal for "is this track actually receiving/producing frames right
 // now" is the track's own `mute`/`unmute` events and its `.muted`
 // property, which is what this hook watches instead of track presence.
+//
+// The effect below is deliberately keyed on the video TRACK, not on the
+// MediaStream: every path that turns a camera on mid-call mutates the
+// EXISTING stream in place (`stream.addTrack(track)`) rather than building a
+// new one, and the 1:1/group `ontrack` handlers are handed back the same
+// MediaStream object the browser already created for that stream id. Keying
+// on `[stream]` therefore never re-fired — the object identity is unchanged —
+// so `live` stayed false forever and no video ever rendered. The track object,
+// by contrast, is stable while the camera is genuinely still on and only
+// appears/disappears on addTrack/removeTrack, which is exactly the transition
+// this needs to notice. Computing it during render (rather than inside the
+// effect) is what lets it act as a dependency at all.
 function useTrackLive(stream: MediaStream | null): boolean {
+  const track = stream?.getVideoTracks()[0] ?? null;
   const [live, setLive] = useState(false);
 
   useEffect(() => {
-    const track = stream?.getVideoTracks()[0];
     if (!track) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setLive(false);
@@ -55,7 +67,7 @@ function useTrackLive(stream: MediaStream | null): boolean {
       track.removeEventListener("mute", handleMute);
       track.removeEventListener("unmute", handleUnmute);
     };
-  }, [stream]);
+  }, [track]);
 
   return live;
 }
@@ -166,7 +178,7 @@ export default function CallWindow() {
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -16 }}
         className={`fixed z-50 flex flex-col gap-2 rounded-2xl border border-border bg-surface/95 p-3 shadow-2xl backdrop-blur-xl transition-all ${
-          expanded ? "inset-8" : "right-4 top-4 w-[min(360px,calc(100%-2rem))]"
+          expanded ? "inset-8" : "right-4 top-4 max-h-[calc(100vh-2rem)] w-[min(360px,calc(100%-2rem))]"
         }`}
       >
         <div className="flex items-center justify-between">

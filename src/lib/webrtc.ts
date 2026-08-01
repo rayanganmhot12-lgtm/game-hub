@@ -46,13 +46,21 @@ export function sendOffer(convId: string, fromCode: string, sdp: RTCSessionDescr
   return set(ref(db, `calls/${convId}/offer`), { fromCode, sdp: JSON.stringify(sdp) });
 }
 
-export function listenForOffer(convId: string, callback: (sdp: RTCSessionDescriptionInit | null) => void) {
+// `calls/{convId}/offer` is a single `set()` slot shared by BOTH directions,
+// so every offer written here echoes back to whoever wrote it. The writer's
+// code is already stored alongside the SDP (see sendOffer) — it's reported to
+// the callback so listeners can tell "the peer is offering" apart from "that's
+// my own offer coming back", which they otherwise cannot do.
+export function listenForOffer(
+  convId: string,
+  callback: (sdp: RTCSessionDescriptionInit | null, fromCode: string | null) => void
+) {
   const db = getFirebaseDb();
   if (!db) return () => {};
   const offerRef = ref(db, `calls/${convId}/offer`);
   const handler = (snapshot: DataSnapshot) => {
     const val = snapshot.val();
-    callback(val ? JSON.parse(val.sdp) : null);
+    callback(val ? JSON.parse(val.sdp) : null, val?.fromCode ?? null);
   };
   onValue(offerRef, handler);
   return () => off(offerRef, "value", handler);

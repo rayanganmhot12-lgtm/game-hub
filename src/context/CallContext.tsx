@@ -21,8 +21,18 @@ import {
 import { getModerationState, isRestricted } from "@/lib/moderationRealtime";
 import { isFirebaseConfigured } from "@/lib/firebase";
 import { acquireCameraTrack, addVideoTrackAndRenegotiate, isNewRemoteOffer } from "@/lib/videoCall";
+import { isGroupCallActive, markDirectCallActive } from "@/lib/callActivity";
 
 type CallStatus = "ringing-out" | "ringing-in" | "connecting" | "connected";
+
+// CallWindow renders exactly one call mode and gives group calls priority, and
+// CallContext no longer renders an <audio> element of its own (Task 3 made the
+// 1:1 video tile the sole playback sink). A 1:1 call running alongside a group
+// call would therefore be invisible, inaudible and un-hangup-able. Rather than
+// render both at once, the two call types are kept mutually exclusive at the
+// entry points — matching this app's existing "one call at a time" model.
+const IN_GROUP_CALL_ERROR = "You're already in a voice channel — leave it first to start a call.";
+const IN_GROUP_CALL_ANSWER_ERROR = "You're already in a voice channel — leave it first to answer a call.";
 
 interface ActiveCall {
   peerCode: string;
@@ -70,8 +80,10 @@ export function CallProvider({ myCode, myDisplayName, children }: { myCode: stri
 
   useEffect(() => {
     return listenForIncomingCalls(myCode, (call) => {
-      // Ignore incoming-call notifications while already on a call.
-      if (activeCallRef.current) return;
+      // Ignore incoming-call notifications while already on a call — either a
+      // 1:1 call or a server voice channel. Ringing during a group call would
+      // offer an Accept button that acceptCall() now refuses anyway.
+      if (activeCallRef.current || isGroupCallActive()) return;
       setIncomingCall(call);
     });
   }, [myCode]);
@@ -89,6 +101,7 @@ export function CallProvider({ myCode, myDisplayName, children }: { myCode: stri
     videoSenderRef.current = null;
     convIdRef.current = null;
     setActiveCall(null);
+    markDirectCallActive(false);
   }, []);
 
   const hangUp = useCallback(() => {
@@ -108,7 +121,16 @@ export function CallProvider({ myCode, myDisplayName, children }: { myCode: stri
       };
 
       pc.ontrack = (event) => {
-        setRemoteStream(event.streams[0]);
+        // Publish a NEW MediaStream identity wrapping the same tracks rather
+        // than `event.streams[0]` itself. When the peer turns their camera on
+        // mid-call the video track arrives on the SAME stream id the audio
+        // track came in on, so the browser hands back the very same
+        // MediaStream object it gave us originally — `setRemoteStream` would
+        // hit React's Object.is bailout and CallWindow would never re-render
+        // to notice that a video track now exists. Wrapping the same tracks
+        // keeps playback and the tracks' own mute/unmute events intact while
+        // guaranteeing the re-render.
+        setRemoteStream(new MediaStream(event.streams[0].getTracks()));
         setActiveCall((prev) => (prev ? { ...prev, status: "connected" } : prev));
       };
 
@@ -125,106 +147,176 @@ export function CallProvider({ myCode, myDisplayName, children }: { myCode: stri
     [myCode, cleanupCall]
   );
 
+  // Handles every remote offer for a 1:1 call — the callee's initial offer and
+  // both sides' later renegotiation offers (camera toggles).
+  //
+  // Unlike the group system, which has a separate signaling path per direction,
+  // 1:1 offers all share ONE `calls/{convId}/offer` slot written with `set()`.
+  // Two consequences have to be handled here:
+  //
+  //  1. Your own offers echo straight back at you, so they must be dropped by
+  //     writer code. (Previously nothing did this: only the `stable` guard
+  //     happened to keep a self-offer from being applied, which stops being
+  //     true the moment we start rolling back during glare.)
+  //  2. Simultaneous camera toggles overwrite each other, so one side's offer
+  //     can be destroyed in the database before the other side ever sees it.
+  //
+  // The tiebreak reuses the `myCode < peerCode` convention that
+  // GroupCallContext.connectToPeer already uses to pick an initial offerer, so
+  // "lower code leads" holds across both call systems.
+  const createRemoteOfferHandler = useCallback(
+    (pc: RTCPeerConnection, convId: string, peerCode: string) =>
+      async (sdp: RTCSessionDescriptionInit | null, fromCode: string | null) => {
+        if (!sdp || fromCode === myCode) return; // our own offer echoing back
+        if (!isNewRemoteOffer(pc, sdp)) return;
+
+        if (pc.signalingState !== "stable") {
+          // Glare: our own offer is still in flight and a conflicting one
+          // just arrived. Anything other than have-local-offer (e.g. already
+          // mid-answer) isn't glare and isn't ours to resolve.
+          if (pc.signalingState !== "have-local-offer") return;
+
+          if (myCode < peerCode) {
+            // Impolite side: our offer wins. It cannot simply be ignored,
+            // though — the peer's write just overwrote ours in the shared
+            // slot, so there is nothing left in the database for them to
+            // answer and BOTH sides would sit in have-local-offer forever,
+            // which is the permanent two-way wedge this fixes. Re-publish our
+            // offer so the polite side has something to roll back to and
+            // answer. Only this side ever re-publishes, so it settles in one
+            // round with no ping-pong.
+            const localOffer = pc.localDescription;
+            if (localOffer) await sendOffer(convId, myCode, { type: localOffer.type, sdp: localOffer.sdp });
+            return;
+          }
+
+          // Polite side: drop our own in-flight offer and take theirs instead.
+          // Rollback returns us to `stable`; the video track we added before
+          // offering stays on the connection, so the answer below can still
+          // carry it.
+          await pc.setLocalDescription({ type: "rollback" });
+        }
+
+        await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        await sendAnswer(convId, answer);
+      },
+    [myCode]
+  );
+
   const startCall = useCallback(
     async (peerCode: string, peerDisplayName: string) => {
+      if (isGroupCallActive()) throw new Error(IN_GROUP_CALL_ERROR);
+      // Claim the "a 1:1 call is in progress" slot before the first await:
+      // setup below waits on getUserMedia, which can sit on a browser
+      // permission prompt for seconds — easily long enough for the user to
+      // click a voice channel and end up in both call types at once, which is
+      // exactly what this mutual exclusion exists to prevent.
+      markDirectCallActive(true);
+      let established = false;
+      try {
+        const state = await getModerationState(myCode);
+        const { restricted, reason } = isRestricted(state);
+        if (restricted) throw new Error(reason);
+        if (!isFirebaseConfigured) throw new Error("Voice calls aren't set up yet — see the README for Firebase setup.");
+
+        const convId = callConversationId(myCode, peerCode);
+        convIdRef.current = convId;
+
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        localStreamRef.current = stream;
+        setLocalStream(stream);
+
+        const pc = setupPeerConnection(convId, peerCode);
+        pcRef.current = pc;
+        stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        await sendOffer(convId, myCode, offer);
+        await ringFriend(peerCode, myCode, myDisplayName, convId);
+
+        setActiveCall({ peerCode, peerDisplayName, convId, status: "ringing-out", sessionId: crypto.randomUUID() });
+        established = true;
+
+        const unsubAnswer = listenForAnswer(convId, async (sdp) => {
+          if (!sdp || pc.signalingState === "stable") return;
+          await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+          setActiveCall((prev) => (prev ? { ...prev, status: "connecting" } : prev));
+        });
+        cleanupFnsRef.current.push(unsubAnswer);
+
+        // The caller only ever sent the initial offer and listened for the
+        // answer — if the CALLEE later turns their camera on, they need to send
+        // a fresh offer of their own, and nobody was listening for it. This
+        // makes the caller side also able to receive and answer a later offer.
+        const unsubRenegotiationOffer = listenForOffer(convId, createRemoteOfferHandler(pc, convId, peerCode));
+        cleanupFnsRef.current.push(unsubRenegotiationOffer);
+      } catch (err) {
+        // Release the claim only if no call actually came up — once
+        // setActiveCall has run, hangUp/cleanupCall owns releasing it.
+        if (!established) markDirectCallActive(false);
+        throw err;
+      }
+    },
+    [myCode, myDisplayName, setupPeerConnection, createRemoteOfferHandler]
+  );
+
+  const acceptCall = useCallback(async () => {
+    if (!incomingCall) return;
+    if (isGroupCallActive()) throw new Error(IN_GROUP_CALL_ANSWER_ERROR);
+    const { fromCode, fromDisplayName, convId } = incomingCall;
+
+    // Same up-front claim as startCall — see the comment there.
+    markDirectCallActive(true);
+    let established = false;
+    try {
       const state = await getModerationState(myCode);
       const { restricted, reason } = isRestricted(state);
-      if (restricted) throw new Error(reason);
-      if (!isFirebaseConfigured) throw new Error("Voice calls aren't set up yet — see the README for Firebase setup.");
+      if (restricted) {
+        setIncomingCall(null);
+        clearIncomingCall(myCode);
+        throw new Error(reason);
+      }
 
-      const convId = callConversationId(myCode, peerCode);
       convIdRef.current = convId;
+      setIncomingCall(null);
+      await clearIncomingCall(myCode);
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       localStreamRef.current = stream;
       setLocalStream(stream);
 
-      const pc = setupPeerConnection(convId, peerCode);
+      const pc = setupPeerConnection(convId, fromCode);
       pcRef.current = pc;
       stream.getTracks().forEach((track) => pc.addTrack(track, stream));
 
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-      await sendOffer(convId, myCode, offer);
-      await ringFriend(peerCode, myCode, myDisplayName, convId);
+      setActiveCall({
+        peerCode: fromCode,
+        peerDisplayName: fromDisplayName,
+        convId,
+        status: "connecting",
+        sessionId: crypto.randomUUID(),
+      });
+      established = true;
 
-      setActiveCall({ peerCode, peerDisplayName, convId, status: "ringing-out", sessionId: crypto.randomUUID() });
+      const unsubOffer = listenForOffer(convId, createRemoteOfferHandler(pc, convId, fromCode));
+      cleanupFnsRef.current.push(unsubOffer);
 
-      const unsubAnswer = listenForAnswer(convId, async (sdp) => {
+      // The callee also needs a way to send their OWN renegotiation offer later
+      // (if they turn their camera on) — the caller's mirror listener added in
+      // Task 3 Step 4 is what receives it.
+      const unsubRenegotiationAnswerAck = listenForAnswer(convId, async (sdp) => {
         if (!sdp || pc.signalingState === "stable") return;
         await pc.setRemoteDescription(new RTCSessionDescription(sdp));
-        setActiveCall((prev) => (prev ? { ...prev, status: "connecting" } : prev));
       });
-      cleanupFnsRef.current.push(unsubAnswer);
-
-      // The caller only ever sent the initial offer and listened for the
-      // answer — if the CALLEE later turns their camera on, they need to send
-      // a fresh offer of their own, and nobody was listening for it. This
-      // makes the caller side also able to receive and answer a later offer.
-      const unsubRenegotiationOffer = listenForOffer(convId, async (sdp) => {
-        if (!sdp || !isNewRemoteOffer(pc, sdp)) return;
-        if (pc.signalingState !== "stable") return;
-        await pc.setRemoteDescription(new RTCSessionDescription(sdp));
-        const answer = await pc.createAnswer();
-        await pc.setLocalDescription(answer);
-        await sendAnswer(convId, answer);
-      });
-      cleanupFnsRef.current.push(unsubRenegotiationOffer);
-    },
-    [myCode, myDisplayName, setupPeerConnection]
-  );
-
-  const acceptCall = useCallback(async () => {
-    if (!incomingCall) return;
-    const { fromCode, fromDisplayName, convId } = incomingCall;
-
-    const state = await getModerationState(myCode);
-    const { restricted, reason } = isRestricted(state);
-    if (restricted) {
-      setIncomingCall(null);
-      clearIncomingCall(myCode);
-      throw new Error(reason);
+      cleanupFnsRef.current.push(unsubRenegotiationAnswerAck);
+    } catch (err) {
+      if (!established) markDirectCallActive(false);
+      throw err;
     }
-
-    convIdRef.current = convId;
-    setIncomingCall(null);
-    await clearIncomingCall(myCode);
-
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    localStreamRef.current = stream;
-    setLocalStream(stream);
-
-    const pc = setupPeerConnection(convId, fromCode);
-    pcRef.current = pc;
-    stream.getTracks().forEach((track) => pc.addTrack(track, stream));
-
-    setActiveCall({
-      peerCode: fromCode,
-      peerDisplayName: fromDisplayName,
-      convId,
-      status: "connecting",
-      sessionId: crypto.randomUUID(),
-    });
-
-    const unsubOffer = listenForOffer(convId, async (sdp) => {
-      if (!sdp || !isNewRemoteOffer(pc, sdp)) return;
-      if (pc.signalingState !== "stable") return;
-      await pc.setRemoteDescription(new RTCSessionDescription(sdp));
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
-      await sendAnswer(convId, answer);
-    });
-    cleanupFnsRef.current.push(unsubOffer);
-
-    // The callee also needs a way to send their OWN renegotiation offer later
-    // (if they turn their camera on) — the caller's mirror listener added in
-    // Task 3 Step 4 is what receives it.
-    const unsubRenegotiationAnswerAck = listenForAnswer(convId, async (sdp) => {
-      if (!sdp || pc.signalingState === "stable") return;
-      await pc.setRemoteDescription(new RTCSessionDescription(sdp));
-    });
-    cleanupFnsRef.current.push(unsubRenegotiationAnswerAck);
-  }, [incomingCall, myCode, setupPeerConnection]);
+  }, [incomingCall, myCode, setupPeerConnection, createRemoteOfferHandler]);
 
   const declineCall = useCallback(() => {
     if (incomingCall) {
@@ -261,27 +353,48 @@ export function CallProvider({ myCode, myDisplayName, children }: { myCode: stri
     const stream = localStreamRef.current;
     if (!pc || !stream) return; // not in a call
     const track = await acquireCameraTrack();
-    // Always re-add the fresh track to the LOCAL stream (turning the camera
-    // off removed the old one, so the local preview would otherwise stay
-    // blank on a second activation even though the remote side correctly
-    // gets the new track via replaceTrack()). Harmless no-op on the very
-    // first activation, where addVideoTrackAndRenegotiate also adds it.
-    stream.addTrack(track);
-    setLocalStream(stream);
+    try {
+      // Always re-add the fresh track to the LOCAL stream (turning the camera
+      // off removed the old one, so the local preview would otherwise stay
+      // blank on a second activation even though the remote side correctly
+      // gets the new track via replaceTrack()). Harmless no-op on the very
+      // first activation, where addVideoTrackAndRenegotiate also adds it.
+      stream.addTrack(track);
+      setLocalStream(stream);
 
-    if (videoSenderRef.current) {
-      // Already renegotiated once before (camera was on earlier this same
-      // call, then turned off) — just swap in the fresh track.
-      await videoSenderRef.current.replaceTrack(track);
-    } else {
-      const convId = convIdRef.current;
-      const sendOfferFn = (offer: RTCSessionDescriptionInit) => {
-        if (!convId) return Promise.resolve();
-        return sendOffer(convId, myCode, offer);
-      };
-      videoSenderRef.current = await addVideoTrackAndRenegotiate(pc, stream, track, sendOfferFn);
+      if (videoSenderRef.current) {
+        // Already renegotiated once before (camera was on earlier this same
+        // call, then turned off) — just swap in the fresh track.
+        await videoSenderRef.current.replaceTrack(track);
+      } else {
+        const convId = convIdRef.current;
+        const sendOfferFn = (offer: RTCSessionDescriptionInit) => {
+          if (!convId) return Promise.resolve();
+          return sendOffer(convId, myCode, offer);
+        };
+        videoSenderRef.current = await addVideoTrackAndRenegotiate(pc, stream, track, sendOfferFn);
+      }
+      setCameraOn(true);
+    } catch (err) {
+      // Roll the whole toggle back. GroupCallContext swallows a per-peer
+      // failure and still turns the camera on, because the OTHER peers must
+      // keep working; here there is exactly one peer, so if renegotiating with
+      // them fails there is nothing left to salvage. Without this the track
+      // stays attached with `cameraOn` still reporting false — a stuck-on
+      // camera light, and the next button press would acquire a SECOND camera
+      // track on top of it.
+      const orphanSender = pc.getSenders().find((s) => s.track === track);
+      track.stop();
+      stream.removeTrack(track);
+      // Detach the half-added sender too, so that a later retry's
+      // pc.addTrack() reuses this now-trackless transceiver instead of adding
+      // a duplicate video m-line.
+      if (orphanSender && pc.signalingState !== "closed") pc.removeTrack(orphanSender);
+      // CallWindow's handleToggleCamera surfaces this via its existing toast,
+      // and its own setTogglingCamera(false) re-render is what clears the
+      // now-trackless local tile back to the avatar.
+      throw err;
     }
-    setCameraOn(true);
   }, [cameraOn, myCode]);
 
   return (
