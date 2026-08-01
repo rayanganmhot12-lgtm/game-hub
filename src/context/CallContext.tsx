@@ -89,19 +89,27 @@ export function CallProvider({ myCode, myDisplayName, children }: { myCode: stri
   }, [myCode]);
 
   const cleanupCall = useCallback(() => {
-    cleanupFnsRef.current.forEach((fn) => fn());
-    cleanupFnsRef.current = [];
-    pcRef.current?.close();
-    pcRef.current = null;
-    localStreamRef.current?.getTracks().forEach((t) => t.stop());
-    localStreamRef.current = null;
-    setCameraOn(false);
-    setLocalStream(null);
-    setRemoteStream(null);
-    videoSenderRef.current = null;
-    convIdRef.current = null;
-    setActiveCall(null);
-    markDirectCallActive(false);
+    try {
+      cleanupFnsRef.current.forEach((fn) => fn());
+      cleanupFnsRef.current = [];
+      pcRef.current?.close();
+      pcRef.current = null;
+      localStreamRef.current?.getTracks().forEach((t) => t.stop());
+      localStreamRef.current = null;
+      setCameraOn(false);
+      setLocalStream(null);
+      setRemoteStream(null);
+      videoSenderRef.current = null;
+      convIdRef.current = null;
+      setActiveCall(null);
+    } finally {
+      // Released in `finally` so a throw from any earlier teardown step (a
+      // Firebase off(), pc.close(), a track stop()) can never leak the claim.
+      // A leaked flag is invisible and unrecoverable without a hard reload:
+      // it blocks every future call, and a leaked GROUP flag would make the
+      // incoming-ring check above drop 1:1 calls with no user feedback at all.
+      markDirectCallActive(false);
+    }
   }, []);
 
   const hangUp = useCallback(() => {
@@ -111,6 +119,26 @@ export function CallProvider({ myCode, myDisplayName, children }: { myCode: stri
     }
     cleanupCall();
   }, [cleanupCall]);
+
+  // The providers live in `src/app/(app)/layout.tsx`, so a client-side
+  // navigation OUT of the (app) route group — "Recap" (/recap), "Big Picture"
+  // (/big-picture), or logout's router.push("/") — unmounts them while a call
+  // can still be live. Without this the module-level claim in lib/callActivity
+  // outlives React and stays set for the rest of the page session.
+  //
+  // `hangUp` rather than `cleanupCall`: it is the same teardown a normal
+  // hang-up performs, so the peer is actually told the call ended instead of
+  // being stranded in a dead call, and it is safe when idle (the signalling is
+  // guarded by convIdRef, and cleanupCall no-ops on empty refs). Both
+  // `cleanupCall` and `hangUp` are useCallbacks with stable identities (deps
+  // `[]` and `[cleanupCall]`), so this effect mounts and unmounts exactly once
+  // — putting a non-stable callback here would tear down a LIVE call every
+  // time its identity changed.
+  useEffect(() => {
+    return () => {
+      hangUp();
+    };
+  }, [hangUp]);
 
   const setupPeerConnection = useCallback(
     (convId: string, peerCode: string): RTCPeerConnection => {

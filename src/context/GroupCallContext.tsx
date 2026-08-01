@@ -214,28 +214,61 @@ export function GroupCallProvider({
   );
 
   const leaveGroupCall = useCallback(() => {
-    for (const code of peerConnectionsRef.current.keys()) {
-      disconnectFromPeer(code);
+    try {
+      for (const code of peerConnectionsRef.current.keys()) {
+        disconnectFromPeer(code);
+      }
+      if (groupIdRef.current) {
+        leaveGroupCallRealtime(groupIdRef.current, myCode);
+      }
+      clearCallPresence(myCode);
+      unsubParticipantsRef.current?.();
+      unsubParticipantsRef.current = null;
+      localStreamRef.current?.getTracks().forEach((t) => t.stop());
+      localStreamRef.current = null;
+      setCameraOn(false);
+      setLocalStream(null);
+      videoSendersRef.current.clear();
+      groupIdRef.current = null;
+      setPeers([]);
+      setRemoteStreams({});
+      setActiveGroupCall(null);
+    } finally {
+      // Released in `finally` so a throw from any earlier teardown step (a
+      // Firebase off(), pc.close(), a track stop()) can never leak the claim.
+      // A leaked flag is invisible and unrecoverable without a hard reload: it
+      // blocks every future call, and because CallContext's incoming-ring
+      // check consults this flag, a leaked one silently drops every future 1:1
+      // call with no banner, no ringtone and no feedback of any kind.
+      markGroupCallActive(false);
     }
-    if (groupIdRef.current) {
-      leaveGroupCallRealtime(groupIdRef.current, myCode);
-    }
-    clearCallPresence(myCode);
-    unsubParticipantsRef.current?.();
-    unsubParticipantsRef.current = null;
-    localStreamRef.current?.getTracks().forEach((t) => t.stop());
-    localStreamRef.current = null;
-    setCameraOn(false);
-    setLocalStream(null);
-    videoSendersRef.current.clear();
-    groupIdRef.current = null;
-    setPeers([]);
-    setRemoteStreams({});
-    setActiveGroupCall(null);
-    markGroupCallActive(false);
     // Mute/deafen are treated as a standing preference, not per-call state —
     // matches Discord, where leaving a call doesn't silently unmute you.
   }, [myCode, disconnectFromPeer]);
+
+  // Mirrors the latest leaveGroupCall for the unmount effect below. Unlike
+  // CallContext's hangUp, this callback's identity is NOT stable (deps
+  // [myCode, disconnectFromPeer]), so putting it in the effect's dep array
+  // would tear down a LIVE call whenever that identity changed. Same
+  // ref-mirror pattern already used above for `muted`.
+  const leaveGroupCallRef = useRef(leaveGroupCall);
+  useEffect(() => {
+    leaveGroupCallRef.current = leaveGroupCall;
+  }, [leaveGroupCall]);
+
+  // The providers live in `src/app/(app)/layout.tsx`, so a client-side
+  // navigation OUT of the (app) route group — "Recap" (/recap), "Big Picture"
+  // (/big-picture), or logout's router.push("/") — unmounts them while a call
+  // can still be live. Without this the module-level claim in lib/callActivity
+  // outlives React and stays set for the rest of the page session. Running the
+  // full leave (not just the flag release) also drops the peer connections and
+  // tells the other participants we're gone; it is safe when idle, where every
+  // step is either a no-op over empty refs or a remove() of nothing.
+  useEffect(() => {
+    return () => {
+      leaveGroupCallRef.current();
+    };
+  }, []);
 
   const joinGroupCall = useCallback(
     async (groupId: string, groupName: string) => {
