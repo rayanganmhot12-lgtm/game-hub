@@ -13,8 +13,8 @@ import AutoSync from "@/components/AutoSync";
 import PresenceHeartbeat from "@/components/PresenceHeartbeat";
 import WarningOverlay from "@/components/WarningOverlay";
 import AnnouncementBanner from "@/components/AnnouncementBanner";
-import CallBar from "@/components/CallBar";
-import GroupCallBar from "@/components/GroupCallBar";
+import CallWindow from "@/components/CallWindow";
+import IncomingCallBanner from "@/components/IncomingCallBanner";
 import PointsGiftListener from "@/components/PointsGiftListener";
 import CosmeticGiftListener from "@/components/CosmeticGiftListener";
 import GroupMessageNotifier from "@/components/GroupMessageNotifier";
@@ -65,8 +65,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <PointsGiftListener myCode={myFriendCode} />
           <CosmeticGiftListener myCode={myFriendCode} />
           <GroupMessageNotifier servers={servers} myCode={myFriendCode} />
-          <CallBar />
-          <GroupCallBar />
+          <IncomingCallBanner />
+          <CallWindow />
           <div className="flex min-h-screen flex-col">
             <Navbar points={user.points} />
             <div className="flex flex-1">
