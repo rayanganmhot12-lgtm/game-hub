@@ -17,7 +17,8 @@ export default function SteamApiKeyPanel() {
       .then((data) => {
         if (cancelled) return;
         setLastFour(data.configured ? data.lastFour : null);
-      });
+      })
+      .catch(() => {});
     return () => {
       cancelled = true;
     };
@@ -26,6 +27,10 @@ export default function SteamApiKeyPanel() {
   async function handleSave() {
     if (!apiKey.trim()) {
       showToast("Enter your Steam API key.", "error");
+      return;
+    }
+    if (apiKey.trim().length < 8) {
+      showToast("That doesn't look like a real Steam API key — they're normally much longer.", "error");
       return;
     }
     setSaving(true);
@@ -39,7 +44,7 @@ export default function SteamApiKeyPanel() {
       if (!res.ok) throw new Error(data.error ?? "Couldn't save the key.");
       setLastFour(data.lastFour);
       setApiKey("");
-      showToast("Saved — close and reopen Game Hub for it to take effect.", "success");
+      showToast("Saved — your key will be used the next time you sync.", "success");
     } catch (err) {
       showToast(err instanceof Error ? err.message : "Couldn't save the key.", "error");
     } finally {

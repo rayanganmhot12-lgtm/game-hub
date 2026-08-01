@@ -12,7 +12,7 @@ export async function GET() {
   }
 
   const settings = readInstallSettings();
-  if (!settings.steamApiKey) {
+  if (!settings.steamApiKey || settings.steamApiKey.length < 8) {
     return NextResponse.json({ configured: false });
   }
   return NextResponse.json({ configured: true, lastFour: settings.steamApiKey.slice(-4) });

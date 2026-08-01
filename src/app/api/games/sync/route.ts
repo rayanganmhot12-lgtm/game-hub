@@ -30,7 +30,7 @@ export async function POST() {
           accountId: account.id,
           platform: account.platform,
           ok: false,
-          error: "Couldn't reach Steam. Check that STEAM_API_KEY is set correctly in .env.",
+          error: "Couldn't reach Steam. Add your Steam API key on the Connections page, or check your existing key.",
         });
       }
     }

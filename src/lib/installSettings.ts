@@ -21,7 +21,10 @@ function settingsPath(): string {
 export function readInstallSettings(): InstallSettings {
   try {
     const raw = fs.readFileSync(settingsPath(), "utf8");
-    return JSON.parse(raw) as InstallSettings;
+    const parsed: unknown = JSON.parse(raw);
+    if (typeof parsed !== "object" || parsed === null) return {};
+    const steamApiKey = (parsed as Record<string, unknown>).steamApiKey;
+    return typeof steamApiKey === "string" ? { steamApiKey } : {};
   } catch {
     return {};
   }
