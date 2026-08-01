@@ -1,5 +1,17 @@
+import { readInstallSettings } from "@/lib/installSettings";
+
 const STEAM_OPENID_ENDPOINT = "https://steamcommunity.com/openid/login";
 const STEAM_API_BASE = "https://api.steampowered.com";
+
+// The env var always wins (unchanged local-dev workflow: .env or a
+// PowerShell-set environment variable). Falling back to the persisted
+// settings file is what lets a packaged install work without either.
+function getSteamApiKey(): string {
+  if (process.env.STEAM_API_KEY) return process.env.STEAM_API_KEY;
+  const settings = readInstallSettings();
+  if (settings.steamApiKey) return settings.steamApiKey;
+  throw new Error("STEAM_API_KEY is not configured");
+}
 
 function getBaseUrl() {
   return process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
@@ -54,8 +66,7 @@ export interface SteamOwnedGame {
 }
 
 export async function fetchOwnedGames(steamId: string): Promise<SteamOwnedGame[]> {
-  const apiKey = process.env.STEAM_API_KEY;
-  if (!apiKey) throw new Error("STEAM_API_KEY is not configured");
+  const apiKey = getSteamApiKey();
 
   const params = new URLSearchParams({
     key: apiKey,
@@ -82,8 +93,7 @@ export interface SteamPlayerSummary {
 export async function fetchPlayerSummary(
   steamId: string
 ): Promise<SteamPlayerSummary | null> {
-  const apiKey = process.env.STEAM_API_KEY;
-  if (!apiKey) throw new Error("STEAM_API_KEY is not configured");
+  const apiKey = getSteamApiKey();
 
   const params = new URLSearchParams({ key: apiKey, steamids: steamId });
   const res = await fetch(
@@ -113,8 +123,7 @@ export async function fetchAchievements(
   appid: number,
   steamId: string
 ): Promise<SteamAchievement[]> {
-  const apiKey = process.env.STEAM_API_KEY;
-  if (!apiKey) throw new Error("STEAM_API_KEY is not configured");
+  const apiKey = getSteamApiKey();
 
   const [playerRes, schemaRes] = await Promise.all([
     fetch(
@@ -184,8 +193,7 @@ export interface FriendActivity {
  * callers should treat an empty result as "nothing to show" not a failure.
  */
 export async function fetchFriendsActivity(steamId: string): Promise<FriendActivity[]> {
-  const apiKey = process.env.STEAM_API_KEY;
-  if (!apiKey) throw new Error("STEAM_API_KEY is not configured");
+  const apiKey = getSteamApiKey();
 
   const friendListRes = await fetch(
     `${STEAM_API_BASE}/ISteamUser/GetFriendList/v1/?${new URLSearchParams({
@@ -235,8 +243,7 @@ export async function fetchFriendsActivity(steamId: string): Promise<FriendActiv
 // Powers Discord Rich Presence — checks whether the user is currently
 // in-game on Steam right now (not just cumulative playtime from sync).
 export async function fetchOwnGameStatus(steamId: string): Promise<string | null> {
-  const apiKey = process.env.STEAM_API_KEY;
-  if (!apiKey) throw new Error("STEAM_API_KEY is not configured");
+  const apiKey = getSteamApiKey();
 
   const res = await fetch(
     `${STEAM_API_BASE}/ISteamUser/GetPlayerSummaries/v2/?${new URLSearchParams({
