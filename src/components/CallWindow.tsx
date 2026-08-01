@@ -12,6 +12,19 @@ interface Tile {
   code: string;
   displayName: string;
   stream: MediaStream | null;
+  // Whether this tile's <video> element should play its stream's audio.
+  // The three tile kinds each need a different answer: the local "me" tile
+  // must never play back your own mic (instant self-echo the moment your
+  // camera is on); group peer tiles must stay muted too, since
+  // GroupCallContext already renders its own per-peer <audio> element for
+  // every peer independent of video state, and a peer's video/audio tracks
+  // share the same MediaStream, so an unmuted video tile would double up
+  // that same audio; the 1:1 direct peer tile must NOT be muted, since
+  // CallContext no longer renders any <audio> element of its own (removed
+  // in Task 3 specifically so this video tile would be the sole playback
+  // sink) — muting it here would go silent whenever that peer's camera is
+  // off, a regression versus the old audio-only call experience.
+  muted: boolean;
 }
 
 // Whether a tile should show live video is NOT the same question as
@@ -56,7 +69,7 @@ function VideoTile({ tile }: { tile: Tile }) {
         <video
           autoPlay
           playsInline
-          muted={false}
+          muted={tile.muted}
           ref={(el) => {
             if (el && el.srcObject !== tile.stream) el.srcObject = tile.stream;
           }}
@@ -95,9 +108,9 @@ export default function CallWindow() {
   const localStream = isGroup ? group.localStream : direct.localStream;
 
   const tiles: Tile[] = isGroup
-    ? group.peers.map((p) => ({ code: p.code, displayName: p.displayName, stream: group.remoteStreams[p.code] ?? null }))
+    ? group.peers.map((p) => ({ code: p.code, displayName: p.displayName, stream: group.remoteStreams[p.code] ?? null, muted: true }))
     : direct.activeCall
-      ? [{ code: direct.activeCall.peerCode, displayName: direct.activeCall.peerDisplayName, stream: direct.remoteStream }]
+      ? [{ code: direct.activeCall.peerCode, displayName: direct.activeCall.peerDisplayName, stream: direct.remoteStream, muted: false }]
       : [];
 
   async function handleToggleCamera() {
@@ -141,7 +154,7 @@ export default function CallWindow() {
         </div>
 
         <div className={`grid flex-1 gap-2 overflow-y-auto ${expanded ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-1"}`}>
-          <VideoTile tile={{ code: "me", displayName: "You", stream: localStream }} />
+          <VideoTile tile={{ code: "me", displayName: "You", stream: localStream, muted: true }} />
           {tiles.map((t) => (
             <VideoTile key={t.code} tile={t} />
           ))}
