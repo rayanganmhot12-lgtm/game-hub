@@ -43,7 +43,7 @@ export default function Sidebar({
   if (pathname.startsWith("/groups/")) return null;
 
   return (
-    <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-56 shrink-0 flex-col border-r border-border/60 bg-surface/40 backdrop-blur-xl md:flex">
+    <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-72 shrink-0 flex-col border-r border-border/60 bg-surface/40 backdrop-blur-xl md:flex">
       <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-4">
         {links.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
