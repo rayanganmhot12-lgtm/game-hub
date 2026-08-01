@@ -19,6 +19,7 @@ import {
 } from "@/lib/groupCallRealtime";
 import { getModerationState, isRestricted } from "@/lib/moderationRealtime";
 import { isFirebaseConfigured } from "@/lib/firebase";
+import { acquireCameraTrack, addVideoTrackAndRenegotiate, isNewRemoteOffer } from "@/lib/videoCall";
 
 interface GroupCallPeer {
   code: string;
@@ -36,10 +37,13 @@ interface GroupCallContextValue {
   peers: GroupCallPeer[];
   muted: boolean;
   deafened: boolean;
+  cameraOn: boolean;
+  localStream: MediaStream | null;
   joinGroupCall: (groupId: string, groupName: string) => Promise<void>;
   leaveGroupCall: () => void;
   toggleMuted: () => void;
   toggleDeafen: () => void;
+  toggleCamera: () => Promise<void>;
   remoteStreams: Record<string, MediaStream>;
   locallyMutedPeers: Set<string>;
   toggleLocalMute: (peerCode: string) => void;
@@ -60,6 +64,8 @@ export function GroupCallProvider({
   const [peers, setPeers] = useState<GroupCallPeer[]>([]);
   const [muted, setMuted] = useState(false);
   const [deafened, setDeafened] = useState(false);
+  const [cameraOn, setCameraOn] = useState(false);
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStreams, setRemoteStreams] = useState<Record<string, MediaStream>>({});
   // Purely local, per-viewer preference — muting how a peer sounds to you
   // doesn't affect what anyone else hears, so no signaling needed.
@@ -67,6 +73,7 @@ export function GroupCallProvider({
 
   const localStreamRef = useRef<MediaStream | null>(null);
   const peerConnectionsRef = useRef<Map<string, RTCPeerConnection>>(new Map());
+  const videoSendersRef = useRef<Map<string, RTCRtpSender>>(new Map());
   const peerCleanupRef = useRef<Map<string, Array<() => void>>>(new Map());
   const groupIdRef = useRef<string | null>(null);
   const unsubParticipantsRef = useRef<(() => void) | null>(null);
@@ -85,6 +92,7 @@ export function GroupCallProvider({
     if (pc) {
       pc.close();
       peerConnectionsRef.current.delete(peerCode);
+      videoSendersRef.current.delete(peerCode);
     }
     const cleanups = peerCleanupRef.current.get(peerCode);
     if (cleanups) {
@@ -118,7 +126,13 @@ export function GroupCallProvider({
       };
 
       localStreamRef.current?.getTracks().forEach((track) => {
-        if (localStreamRef.current) pc.addTrack(track, localStreamRef.current);
+        if (!localStreamRef.current) return;
+        const sender = pc.addTrack(track, localStreamRef.current);
+        // If the camera was already on before this peer joined, this
+        // connection's very first offer already includes video — track the
+        // sender now so a later camera toggle can reuse it via replaceTrack()
+        // instead of renegotiating a second time.
+        if (track.kind === "video") videoSendersRef.current.set(peerCode, sender);
       });
 
       const unsubCandidates = listenForGroupCallCandidates(groupId, peerCode, myCode, (candidate) => {
@@ -127,8 +141,8 @@ export function GroupCallProvider({
 
       const cleanups: Array<() => void> = [unsubCandidates];
 
-      // Deterministic tie-breaker so both sides agree on who offers —
-      // avoids both peers creating competing offers at once.
+      // Deterministic tie-breaker so both sides agree who offers *first* —
+      // avoids both peers creating competing initial offers at once.
       if (myCode < peerCode) {
         (async () => {
           const offer = await pc.createOffer();
@@ -136,19 +150,55 @@ export function GroupCallProvider({
           await sendGroupCallOffer(groupId, myCode, peerCode, offer);
         })();
         const unsubAnswer = listenForGroupCallAnswer(groupId, peerCode, myCode, async (sdp) => {
-          if (pc.currentRemoteDescription) return;
+          if (pc.signalingState === "stable") return; // already applied this exact answer
           await pc.setRemoteDescription(new RTCSessionDescription(sdp));
         });
         cleanups.push(unsubAnswer);
       } else {
         const unsubOffer = listenForGroupCallOffer(groupId, peerCode, myCode, async (sdp) => {
-          if (pc.currentRemoteDescription) return;
+          if (!isNewRemoteOffer(pc, sdp)) return;
           await pc.setRemoteDescription(new RTCSessionDescription(sdp));
           const answer = await pc.createAnswer();
           await pc.setLocalDescription(answer);
           await sendGroupCallAnswer(groupId, myCode, peerCode, answer);
         });
         cleanups.push(unsubOffer);
+      }
+
+      // Renegotiation support: whichever side did NOT take the initial
+      // offerer role above still needs a way to receive a *later* offer (if
+      // the other side turns their camera on) and a way to send their own
+      // renegotiation offer (if THEY turn their camera on). The block above
+      // already covers "receive an offer" for the answerer role and "send an
+      // offer" for the offerer role — this block covers the two mirror
+      // cases, so camera toggling works no matter which side does it.
+      if (myCode < peerCode) {
+        // I was the initial offerer — I also need to listen for a possible
+        // later offer from the answerer (if they turn their camera on) and
+        // respond with a fresh answer.
+        const unsubRenegotiationOffer = listenForGroupCallOffer(groupId, peerCode, myCode, async (sdp) => {
+          if (!isNewRemoteOffer(pc, sdp)) return;
+          if (pc.signalingState !== "stable") return; // ignore while our own offer is still in flight
+          await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          await sendGroupCallAnswer(groupId, myCode, peerCode, answer);
+        });
+        cleanups.push(unsubRenegotiationOffer);
+      } else {
+        // I was the initial answerer — I also need a way to send my OWN
+        // offer later (if I turn my camera on), and the other side's block
+        // above is already listening for it via listenForGroupCallOffer.
+        // Whichever side answers a given negotiation round always writes to
+        // signals/{answerer}/{offerer}/answer, so listening for MY answer to
+        // THEIR (this round's) offer uses the same (peerCode, myCode)
+        // argument order the original offerer branch above uses — not
+        // (myCode, peerCode), which would read the wrong path entirely.
+        const unsubRenegotiationAnswer = listenForGroupCallAnswer(groupId, peerCode, myCode, async (sdp) => {
+          if (pc.signalingState === "stable") return;
+          await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+        });
+        cleanups.push(unsubRenegotiationAnswer);
       }
 
       peerCleanupRef.current.set(peerCode, cleanups);
@@ -168,6 +218,9 @@ export function GroupCallProvider({
     unsubParticipantsRef.current = null;
     localStreamRef.current?.getTracks().forEach((t) => t.stop());
     localStreamRef.current = null;
+    setCameraOn(false);
+    setLocalStream(null);
+    videoSendersRef.current.clear();
     groupIdRef.current = null;
     setPeers([]);
     setRemoteStreams({});
@@ -188,6 +241,7 @@ export function GroupCallProvider({
       // a pre-set mute would silently stop applying on your next call.
       stream.getAudioTracks().forEach((track) => (track.enabled = !mutedRef.current));
       localStreamRef.current = stream;
+      setLocalStream(stream);
       groupIdRef.current = groupId;
 
       await joinGroupCallRealtime(groupId, myCode, myDisplayName);
@@ -241,6 +295,61 @@ export function GroupCallProvider({
     });
   }, []);
 
+  const toggleCamera = useCallback(async () => {
+    if (cameraOn) {
+      // Genuinely stop the track (turns the OS camera light off) and clear
+      // every peer's sender via replaceTrack(null) — no renegotiation.
+      localStreamRef.current?.getVideoTracks().forEach((track) => {
+        track.stop();
+        localStreamRef.current?.removeTrack(track);
+      });
+      for (const sender of videoSendersRef.current.values()) {
+        await sender.replaceTrack(null).catch(() => {});
+      }
+      setCameraOn(false);
+      return;
+    }
+
+    if (!localStreamRef.current) return; // not in a call
+    const track = await acquireCameraTrack();
+    const stream = localStreamRef.current;
+    // Always re-add the fresh track to the LOCAL stream, not just the peer
+    // senders — turning the camera off removed the old track from `stream`
+    // (so the local preview correctly goes blank), so a later re-activation
+    // needs to add the new one back or the local preview would stay blank
+    // forever even though remote peers correctly receive the new track via
+    // replaceTrack(). addTrack() is a harmless no-op if the track is already
+    // present (e.g. the very first activation, where addVideoTrackAndRenegotiate
+    // below also adds it) — safe to call unconditionally either way.
+    stream.addTrack(track);
+    setLocalStream(stream);
+
+    // Each peer is handled independently, and a failure with one peer must
+    // not stop the others from getting the video track — a flaky connection
+    // to one person shouldn't mean nobody else sees your camera.
+    for (const [peerCode, pc] of peerConnectionsRef.current.entries()) {
+      try {
+        const existingSender = videoSendersRef.current.get(peerCode);
+        if (existingSender) {
+          // Already renegotiated once before (this peer had video previously,
+          // then it was turned off) — just swap in the fresh track.
+          await existingSender.replaceTrack(track);
+        } else {
+          const sendOffer = (offer: RTCSessionDescriptionInit) => {
+            const groupId = groupIdRef.current;
+            if (!groupId) return Promise.resolve();
+            return sendGroupCallOffer(groupId, myCode, peerCode, offer);
+          };
+          const sender = await addVideoTrackAndRenegotiate(pc, stream, track, sendOffer);
+          videoSendersRef.current.set(peerCode, sender);
+        }
+      } catch (err) {
+        console.error(`Failed to send video to ${peerCode}:`, err);
+      }
+    }
+    setCameraOn(true);
+  }, [cameraOn, myCode]);
+
   const toggleLocalMute = useCallback((peerCode: string) => {
     setLocallyMutedPeers((prev) => {
       const next = new Set(prev);
@@ -257,10 +366,13 @@ export function GroupCallProvider({
         peers,
         muted,
         deafened,
+        cameraOn,
+        localStream,
         joinGroupCall,
         leaveGroupCall,
         toggleMuted,
         toggleDeafen,
+        toggleCamera,
         remoteStreams,
         locallyMutedPeers,
         toggleLocalMute,
