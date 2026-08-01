@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useRef, useState, ReactNode } from "react";
-import { playClickSound, playHoverSound, playSuccessSound, playWarningSound, playPlusFanfare, startRingtone } from "@/lib/sound";
+import { playClickSound, playHoverSound, playSuccessSound, playWarningSound, playPlusFanfare, playAnnouncementSound, startRingtone } from "@/lib/sound";
 
 const SOUND_STORAGE_KEY = "gamehub-sound-muted";
 
@@ -12,6 +12,7 @@ interface SoundContextValue {
   playWarning: () => void;
   playRingtone: () => () => void;
   playPlus: () => void;
+  playAnnouncement: () => void;
 }
 
 const SoundContext = createContext<SoundContextValue | null>(null);
@@ -79,8 +80,12 @@ export function SoundProvider({ children }: { children: ReactNode }) {
     if (!mutedRef.current) playPlusFanfare();
   }
 
+  function playAnnouncement() {
+    if (!mutedRef.current) playAnnouncementSound();
+  }
+
   return (
-    <SoundContext.Provider value={{ muted, toggleMuted, playSuccess, playWarning, playRingtone, playPlus }}>
+    <SoundContext.Provider value={{ muted, toggleMuted, playSuccess, playWarning, playRingtone, playPlus, playAnnouncement }}>
       {children}
     </SoundContext.Provider>
   );

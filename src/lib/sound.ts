@@ -59,6 +59,12 @@ export function playPlusFanfare() {
   [660, 880, 1100, 1320, 1568].forEach((freq, i) => tone(freq, 0.22, 0.05, "sine", textAt + i * 0.09));
 }
 
+// A 5-note attention chime spanning ~5s, timed to line up with
+// AnnouncementBanner's 5s auto-dismiss countdown.
+export function playAnnouncementSound() {
+  [880, 660, 880, 660, 1046].forEach((freq, i) => tone(freq, 0.35, 0.06, "sine", i * 1.0));
+}
+
 // Loops a two-note ring burst every 2s until the returned function is called
 // (call answered, declined, or hung up).
 export function startRingtone(): () => void {

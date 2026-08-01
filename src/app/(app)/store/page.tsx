@@ -6,6 +6,7 @@ import { COSMETIC_CATALOG } from "@/lib/cosmetics";
 import { Wrench } from "lucide-react";
 import StoreGrid from "@/components/StoreGrid";
 import SendPointsPanel from "@/components/SendPointsPanel";
+import WithdrawPointsPanel from "@/components/WithdrawPointsPanel";
 import GiftCosmeticPanel from "@/components/GiftCosmeticPanel";
 import DevCheatsPanel from "@/components/DevCheatsPanel";
 import CollapsibleSection from "@/components/CollapsibleSection";
@@ -39,6 +40,9 @@ export default async function StorePage() {
           <DevCheatsPanel />
           <div className="border-t border-border/40 pt-4">
             <SendPointsPanel myCode={myCode} myDisplayName={myDisplayName} friends={friends} />
+          </div>
+          <div className="border-t border-border/40 pt-4">
+            <WithdrawPointsPanel myCode={myCode} myDisplayName={myDisplayName} friends={friends} />
           </div>
           <div className="border-t border-border/40 pt-4">
             <GiftCosmeticPanel myCode={myCode} myDisplayName={myDisplayName} friends={friends} />

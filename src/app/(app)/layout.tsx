@@ -16,6 +16,7 @@ import AnnouncementBanner from "@/components/AnnouncementBanner";
 import CallWindow from "@/components/CallWindow";
 import IncomingCallBanner from "@/components/IncomingCallBanner";
 import PointsGiftListener from "@/components/PointsGiftListener";
+import PointsWithdrawalListener from "@/components/PointsWithdrawalListener";
 import CosmeticGiftListener from "@/components/CosmeticGiftListener";
 import GroupMessageNotifier from "@/components/GroupMessageNotifier";
 import ProfilePublisher from "@/components/ProfilePublisher";
@@ -63,6 +64,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <WarningOverlay myCode={myFriendCode} />
           <AnnouncementBanner myCode={myFriendCode} />
           <PointsGiftListener myCode={myFriendCode} />
+          <PointsWithdrawalListener myCode={myFriendCode} />
           <CosmeticGiftListener myCode={myFriendCode} />
           <GroupMessageNotifier servers={servers} myCode={myFriendCode} />
           <IncomingCallBanner />
