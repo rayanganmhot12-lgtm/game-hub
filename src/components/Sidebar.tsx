@@ -38,7 +38,13 @@ export default function Sidebar({
 
   // Inside a server, the server rail + channel sidebar take over as
   // navigation — the main app nav would just be redundant clutter.
-  if (pathname.startsWith("/groups/") || pathname.startsWith("/friends") || pathname.startsWith("/store")) return null;
+  if (
+    pathname.startsWith("/groups/") ||
+    pathname.startsWith("/friends") ||
+    pathname.startsWith("/store") ||
+    pathname.startsWith("/moderation")
+  )
+    return null;
 
   return (
     <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-72 shrink-0 flex-col border-r border-border/60 bg-surface/40 backdrop-blur-xl md:flex">
