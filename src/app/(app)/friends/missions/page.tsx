@@ -1,4 +1,4 @@
-import { Trophy } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import EmptyState from "@/components/EmptyState";
 
 export default function MissionsPage() {
@@ -9,7 +9,7 @@ export default function MissionsPage() {
         <p className="text-sm text-muted">Complete quests to earn points.</p>
       </div>
 
-      <EmptyState icon={Trophy} title="Missions">
+      <EmptyState icon={Sparkles} title="Missions">
         Quests and rewards are coming soon.
       </EmptyState>
     </div>
