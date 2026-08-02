@@ -33,7 +33,7 @@ export default function GameHubPage() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Game Hub</h1>
-        <p className="text-sm text-muted">Quick links to everything about your Steam library.</p>
+        <p className="text-sm text-muted">Quick links to your Steam library and connected accounts.</p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
