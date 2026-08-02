@@ -22,19 +22,29 @@ let installInFlight = false;
 function waitForServer(url, timeoutMs = 60000) {
   return new Promise((resolve, reject) => {
     const start = Date.now();
+    const retry = () => {
+      if (Date.now() - start > timeoutMs) {
+        reject(new Error("Game Hub server did not start in time"));
+      } else {
+        setTimeout(check, 300);
+      }
+    };
     const check = () => {
       http
         .get(url, (res) => {
-          res.destroy();
-          resolve();
-        })
-        .on("error", () => {
-          if (Date.now() - start > timeoutMs) {
-            reject(new Error("Game Hub server did not start in time"));
+          res.resume();
+          // Listening is not the same as ready. Right after an update the
+          // server accepts the connection while Next.js is still doing its
+          // first cold render, and answers 5xx — treating that as "ready"
+          // loaded the error page into the window instead of waiting, which
+          // is what made a fresh update look like a broken install.
+          if (res.statusCode && res.statusCode < 500) {
+            resolve();
           } else {
-            setTimeout(check, 300);
+            retry();
           }
-        });
+        })
+        .on("error", retry);
     };
     check();
   });
@@ -148,6 +158,23 @@ function createWindow() {
   });
 
   mainWindow.loadURL(APP_URL);
+
+  // Second net under waitForServer: if the very first load still lands on a
+  // failure (server restarting under us, a race right after an update), retry
+  // quietly a few times instead of leaving the user staring at Chromium's
+  // "server error" page with only a Reload button.
+  let loadRetries = 0;
+  mainWindow.webContents.on("did-fail-load", (_event, _code, _desc, validatedURL, isMainFrame) => {
+    if (!isMainFrame || isQuitting || !validatedURL.startsWith(APP_URL)) return;
+    if (loadRetries >= 10) return;
+    loadRetries += 1;
+    setTimeout(() => {
+      if (!mainWindow.isDestroyed()) mainWindow.loadURL(APP_URL);
+    }, 500);
+  });
+  mainWindow.webContents.on("did-finish-load", () => {
+    loadRetries = 0;
+  });
 
   // Minimize to tray instead of quitting — the music player and sync
   // should be able to keep running in the background.
