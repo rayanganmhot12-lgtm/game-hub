@@ -319,8 +319,7 @@ body {
 }
 
 .banner-shimmer::after,
-.banner-aurora::after,
-.banner-nebula::after {
+.banner-aurora::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -352,43 +351,10 @@ body {
   box-shadow: inset 0 0 10px 0 rgba(56, 189, 248, 0.35);
   animation: banner-neon-glow-shift 5s ease-in-out infinite;
 }
-/* A small pink ringed planet + moon + soft nebula haze + a scatter of stars —
-   opaque enough that it reads as its own scene rather than a color wash. */
-.banner-nebula {
-  background-color: #0c0d16;
-}
-.banner-nebula::after {
-  background:
-    radial-gradient(circle at 14% 28%, #fff 0%, transparent 1.4%),
-    radial-gradient(circle at 33% 12%, #fff 0%, transparent 1.1%),
-    radial-gradient(circle at 52% 32%, #fff 0%, transparent 0.9%),
-    radial-gradient(circle at 78% 18%, #fff 0%, transparent 1.1%),
-    radial-gradient(circle at 91% 42%, #fff 0%, transparent 1.4%),
-    radial-gradient(circle at 22% 58%, #fff 0%, transparent 0.9%),
-    radial-gradient(circle at 8% 75%, #fff 0%, transparent 1.1%),
-    radial-gradient(ellipse 95px 32px at 68% 62%, rgba(255, 255, 255, 0.3) 55%, transparent 70%),
-    radial-gradient(circle at 68% 62%, #fbcfe8 0%, #f472b6 42%, #be185d 68%, transparent 78%),
-    radial-gradient(circle at 90% 32%, #fbcfe8 0%, #f472b6 55%, transparent 75%),
-    radial-gradient(ellipse 240px 150px at 42% 72%, rgba(244, 114, 182, 0.35), transparent 70%);
-  background-size: 200% 200%;
-  animation: banner-nebula-drift 16s ease-in-out infinite;
-}
-/* Sits behind the whole card (see NebulaBackdrop.tsx) so the scene reads as
-   continuing past the card's own edges instead of being clipped by it. */
-.nebula-backdrop {
-  background:
-    radial-gradient(circle at 20% 65%, #fff 0%, transparent 1.4%),
-    radial-gradient(circle at 40% 25%, #fff 0%, transparent 1.1%),
-    radial-gradient(circle at 65% 60%, #fff 0%, transparent 0.9%),
-    radial-gradient(circle at 82% 20%, #fff 0%, transparent 1.3%),
-    radial-gradient(circle at 90% 70%, #fff 0%, transparent 1%),
-    radial-gradient(ellipse 60% 55% at 50% 55%, rgba(244, 114, 182, 0.55), transparent 72%),
-    radial-gradient(circle at 58% 62%, #fbcfe8 0%, #f472b6 40%, #be185d 68%, transparent 78%);
-  background-size: 200% 200%;
-  filter: blur(1px);
-  mask-image: radial-gradient(ellipse 65% 80% at 50% 60%, black 45%, transparent 100%);
-  -webkit-mask-image: radial-gradient(ellipse 65% 80% at 50% 60%, black 45%, transparent 100%);
-  animation: banner-nebula-drift 20s ease-in-out infinite;
+/* The nebula banner is drawn as real shapes in NebulaScene.tsx, not a CSS
+   background effect — this is just its gentle drift animation. */
+.nebula-scene {
+  animation: nebula-scene-float 10s ease-in-out infinite;
 }
 @keyframes banner-shimmer-sweep {
   0% {
@@ -416,13 +382,13 @@ body {
     background-position: 0 0, 100% 50%;
   }
 }
-@keyframes banner-nebula-drift {
+@keyframes nebula-scene-float {
   0%,
   100% {
-    background-position: 0% 0%;
+    transform: translate(0, 0);
   }
   50% {
-    background-position: 8% 6%;
+    transform: translate(2%, -3%);
   }
 }
 
@@ -432,8 +398,7 @@ body {
   .banner-shimmer::after,
   .banner-aurora::after,
   .banner-neon-glow,
-  .banner-nebula::after,
-  .nebula-backdrop,
+  .nebula-scene,
   .name-gradient-cycle {
     animation: none;
   }

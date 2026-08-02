@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import type { CosmeticItem } from "@/lib/cosmetics";
+import NebulaScene from "@/components/NebulaScene";
 
 const FRAME_CLASSES: Record<string, string> = {
   "frame-gold": "frame-gold",
@@ -35,10 +36,20 @@ const BANNER_CLASSES: Record<string, string> = {
   "banner-shimmer": "banner-shimmer",
   "banner-aurora": "banner-aurora",
   "banner-neon-glow": "banner-neon-glow",
-  "banner-nebula": "banner-nebula",
 };
 
 export function CosmeticBanner({ bannerId, children }: { bannerId?: string | null; children: ReactNode }) {
+  // Drawn as real shapes (see NebulaScene) instead of a CSS-class overlay —
+  // it needs actual elements, not just a background effect, to read as a
+  // small illustration rather than a color wash over the real banner photo.
+  if (bannerId === "banner-nebula") {
+    return (
+      <div className="relative overflow-hidden">
+        {children}
+        <NebulaScene />
+      </div>
+    );
+  }
   if (!bannerId || !BANNER_CLASSES[bannerId]) return <>{children}</>;
   return <div className={`relative overflow-hidden ${BANNER_CLASSES[bannerId]}`}>{children}</div>;
 }
