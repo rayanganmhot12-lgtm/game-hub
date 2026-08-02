@@ -66,7 +66,7 @@ export default function ServerRail({
 }) {
   const pathname = usePathname();
   const [showModal, setShowModal] = useState(false);
-  const onCommunity = pathname === "/friends";
+  const onCommunity = pathname.startsWith("/friends");
 
   return (
     <>
