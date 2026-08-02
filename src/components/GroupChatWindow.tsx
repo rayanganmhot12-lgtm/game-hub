@@ -72,8 +72,8 @@ function buildGroups(msgs: GroupMessage[]): MessageGroup[] {
     const last = groups[groups.length - 1];
     const lastMsg = last?.messages[last.messages.length - 1];
     const sameSender = last?.senderCode === m.senderCode;
-    const withinWindow =
-      lastMsg !== undefined && new Date(m.sentAt).getTime() - new Date(lastMsg.sentAt).getTime() <= GROUP_WINDOW_MS;
+    const delta = lastMsg !== undefined ? new Date(m.sentAt).getTime() - new Date(lastMsg.sentAt).getTime() : 0;
+    const withinWindow = lastMsg !== undefined && delta >= 0 && delta <= GROUP_WINDOW_MS;
     if (sameSender && withinWindow) {
       last.messages.push(m);
     } else {
@@ -861,18 +861,18 @@ export default function GroupChatWindow({
                       <button
                         onClick={openProfile}
                         onContextMenu={openContextMenu}
-                        className="flex items-center gap-1.5 text-left transition-colors hover:text-foreground"
+                        className="flex items-center gap-1.5 text-left hover:underline"
                       >
                         <span className="text-sm font-medium text-foreground">{senderName}</span>
                         <CosmeticBadge badgeId={senderBadge} />
                         {tag && tagEquippedCodes.has(group.senderCode) && <TagChip tag={tag} />}
                         {senderRole && <RoleChip role={senderRole} />}
                       </button>
-                      <span className="text-[11px] text-muted">{formatMessageTime(first.sentAt)}</span>
+                      <span className="whitespace-nowrap text-[11px] text-muted">{formatMessageTime(first.sentAt)}</span>
                     </div>
 
                     <div className="flex flex-col">
-                      {group.messages.map((m) => {
+                      {group.messages.map((m, mi) => {
                         const isPinned = !!m.clientId && m.clientId === pinnedClientId;
                         const isEditing = !!m.clientId && editingClientId === m.clientId;
                         const editedText = m.clientId ? edits[m.clientId] : undefined;
@@ -885,8 +885,8 @@ export default function GroupChatWindow({
                               isPinned ? "ring-1 ring-accent-bright/40" : ""
                             }`}
                           >
-                            <span className="flex w-8 shrink-0 items-center justify-center pt-0.5 text-[10px] text-muted opacity-0 transition-opacity group-hover/msg:opacity-100">
-                              {formatMessageTime(m.sentAt)}
+                            <span className="flex w-8 shrink-0 items-center justify-center whitespace-nowrap pt-0.5 text-[10px] text-muted opacity-0 transition-opacity group-hover/msg:opacity-100">
+                              {mi > 0 && formatMessageTime(m.sentAt)}
                             </span>
                             <div className="min-w-0 flex-1">
                               {isEditing ? (

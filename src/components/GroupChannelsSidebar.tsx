@@ -285,10 +285,10 @@ export default function GroupChannelsSidebar({
           onClick={handleJoinVoice}
           disabled={joiningVoice || connectedHere || inOtherCall}
           title={inOtherCall ? "Leave your current voice call first" : connectedHere ? "You're connected" : "Join voice"}
-          className={`flex w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-left text-sm transition-colors disabled:cursor-default ${
+          className={`flex w-full items-center gap-1.5 rounded-lg py-1.5 pl-3 pr-2 text-left text-sm transition-colors disabled:cursor-default ${
             connectedHere
               ? "bg-accent/15 text-accent-bright"
-              : "text-muted hover:bg-surface-2/30 hover:text-foreground disabled:hover:bg-transparent"
+              : "text-muted hover:bg-surface-2/40 hover:text-foreground disabled:hover:bg-transparent"
           }`}
         >
           <Volume2 size={16} className="shrink-0" />
