@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
 import { Send, Hash, Pin, PinOff, X, UserPlus, ImagePlus, MessageSquare, Copy, Check, Pencil, Trash2, Search } from "lucide-react";
 import { isFirebaseConfigured } from "@/lib/firebase";
 import { formatFriendCode } from "@/lib/friendCode";
@@ -53,6 +52,39 @@ const TYPING_STALE_MS = 3000;
 
 function escapeRegExp(s: string) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+const GROUP_WINDOW_MS = 5 * 60 * 1000;
+
+interface MessageGroup {
+  senderCode: string;
+  messages: GroupMessage[];
+}
+
+// Consecutive messages from the same sender, no more than 5 minutes apart,
+// render under one avatar/name header instead of repeating it per message —
+// bypassed entirely while searching (see isSearching below), since matched
+// results are usually non-consecutive and grouping them would misrepresent
+// who said what.
+function buildGroups(msgs: GroupMessage[]): MessageGroup[] {
+  const groups: MessageGroup[] = [];
+  for (const m of msgs) {
+    const last = groups[groups.length - 1];
+    const lastMsg = last?.messages[last.messages.length - 1];
+    const sameSender = last?.senderCode === m.senderCode;
+    const withinWindow =
+      lastMsg !== undefined && new Date(m.sentAt).getTime() - new Date(lastMsg.sentAt).getTime() <= GROUP_WINDOW_MS;
+    if (sameSender && withinWindow) {
+      last.messages.push(m);
+    } else {
+      groups.push({ senderCode: m.senderCode, messages: [m] });
+    }
+  }
+  return groups;
+}
+
+function formatMessageTime(sentAt: string | Date): string {
+  return new Date(sentAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
 function extractMentions(text: string, members: Array<{ code: string; displayName: string }>): string[] {
@@ -618,6 +650,10 @@ export default function GroupChatWindow({
     : visibleMessages;
   const displayChannels = channels.length > 0 ? channels : DEFAULT_CHANNELS;
   const activeChannelName = displayChannels.find((c) => c.id === activeChannelId)?.name ?? "general";
+  const isSearching = searchQuery.trim().length > 0;
+  const messageGroups: MessageGroup[] = isSearching
+    ? searchedMessages.map((m) => ({ senderCode: m.senderCode, messages: [m] }))
+    : buildGroups(searchedMessages);
   const allMembers = [
     {
       code: myCode,
@@ -768,183 +804,169 @@ export default function GroupChatWindow({
               <p className="text-center text-sm text-muted">This is the start of #{activeChannelName} — say hi!</p>
             )
           ) : (
-            <div className="flex flex-col gap-2">
-              {searchedMessages.map((m) => {
-                const isMine = m.senderCode === myCode;
-                const senderBadge = members.find((mem) => mem.memberCode === m.senderCode)?.memberBadge;
-                const senderName = nicknames[m.senderCode] ?? m.senderDisplayName;
-                const isPinned = !!m.clientId && m.clientId === pinnedClientId;
-                const isEditing = !!m.clientId && editingClientId === m.clientId;
-                const editedText = m.clientId ? edits[m.clientId] : undefined;
-                const displayText = editedText ?? m.text;
+            <div className="flex flex-col gap-3">
+              {messageGroups.map((group) => {
+                const first = group.messages[0];
+                const isMineGroup = group.senderCode === myCode;
+                const senderName = isMineGroup
+                  ? nicknames[myCode] ?? myDisplayName
+                  : nicknames[group.senderCode] ?? first.senderDisplayName;
+                const senderBadge = isMineGroup
+                  ? myBadge
+                  : members.find((mem) => mem.memberCode === group.senderCode)?.memberBadge;
+                const senderRoleId = memberRoles[group.senderCode];
+                const senderRole = senderRoleId ? roles.find((r) => r.id === senderRoleId) : undefined;
+                const senderAvatarUrl = isMineGroup ? myAvatarDataUrl : profiles[group.senderCode]?.avatarDataUrl;
+
+                function openProfile() {
+                  setViewingMember({
+                    code: group.senderCode,
+                    displayName: senderName,
+                    badge: senderBadge,
+                    roleId: senderRoleId ?? null,
+                  });
+                }
+                function openContextMenu(e: React.MouseEvent) {
+                  e.preventDefault();
+                  setMsgMenuTarget({
+                    member: {
+                      code: group.senderCode,
+                      displayName: senderName,
+                      badge: senderBadge,
+                      tagEquipped: tagEquippedCodes.has(group.senderCode),
+                      roleId: senderRoleId ?? null,
+                    },
+                    x: e.clientX,
+                    y: e.clientY,
+                  });
+                }
+
                 return (
-                  <div
-                    key={m.id}
-                    id={m.clientId ? `msg-${m.clientId}` : undefined}
-                    className={`group/msg flex items-end gap-2 ${isMine ? "flex-row-reverse" : "flex-row"}`}
-                  >
-                    {!isMine && (
-                      <button
-                        onClick={() => setViewingMember({ code: m.senderCode, displayName: senderName, badge: senderBadge, roleId: memberRoles[m.senderCode] ?? null })}
-                        onContextMenu={(e) => {
-                          e.preventDefault();
-                          setMsgMenuTarget({
-                            member: {
-                              code: m.senderCode,
-                              displayName: senderName,
-                              badge: senderBadge,
-                              tagEquipped: tagEquippedCodes.has(m.senderCode),
-                              roleId: memberRoles[m.senderCode] ?? null,
-                            },
-                            x: e.clientX,
-                            y: e.clientY,
-                          });
-                        }}
-                        title="View profile"
-                      >
-                        {profiles[m.senderCode]?.avatarDataUrl ? (
+                  <div key={first.id} className="flex flex-col gap-0.5">
+                    <div className="flex items-center gap-2 px-1">
+                      <button onClick={openProfile} onContextMenu={openContextMenu} title="View profile" className="shrink-0">
+                        {senderAvatarUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element -- data URI, not an optimizable remote/static asset
                           <img
-                            src={profiles[m.senderCode].avatarDataUrl ?? undefined}
+                            src={senderAvatarUrl}
                             alt={senderName}
-                            width={26}
-                            height={26}
-                            className="h-[26px] w-[26px] rounded-full object-cover"
+                            width={32}
+                            height={32}
+                            className="h-8 w-8 rounded-full object-cover"
                           />
                         ) : (
-                          <Avatar name={senderName} size={26} />
+                          <Avatar name={senderName} size={32} />
                         )}
                       </button>
-                    )}
-                    {isMine && (
-                      <span className="shrink-0" title={myDisplayName}>
-                        {myAvatarDataUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element -- data URI, not an optimizable remote/static asset
-                          <img
-                            src={myAvatarDataUrl}
-                            alt={myDisplayName}
-                            width={26}
-                            height={26}
-                            className="h-[26px] w-[26px] rounded-full object-cover"
-                          />
-                        ) : (
-                          <Avatar name={myDisplayName} size={26} />
-                        )}
-                      </span>
-                    )}
-                    <div className={`flex max-w-[75%] flex-col ${isMine ? "items-end" : "items-start"}`}>
-                      {!isMine && (
-                        <button
-                          onClick={() => setViewingMember({ code: m.senderCode, displayName: senderName, badge: senderBadge, roleId: memberRoles[m.senderCode] ?? null })}
-                          onContextMenu={(e) => {
-                            e.preventDefault();
-                            setMsgMenuTarget({
-                              member: {
-                                code: m.senderCode,
-                                displayName: senderName,
-                                badge: senderBadge,
-                                tagEquipped: tagEquippedCodes.has(m.senderCode),
-                                roleId: memberRoles[m.senderCode] ?? null,
-                              },
-                              x: e.clientX,
-                              y: e.clientY,
-                            });
-                          }}
-                          className="mb-0.5 flex items-center gap-1.5 px-1 text-[11px] text-muted transition-colors hover:text-foreground"
-                        >
-                          {senderName}
-                          <CosmeticBadge badgeId={senderBadge} />
-                          {tag && tagEquippedCodes.has(m.senderCode) && <TagChip tag={tag} />}
-                          {memberRoles[m.senderCode] && (() => {
-                            const role = roles.find((r) => r.id === memberRoles[m.senderCode]);
-                            return role ? <RoleChip role={role} /> : null;
-                          })()}
-                        </button>
-                      )}
-                      <div className="flex items-center gap-1">
-                        {isMine && m.clientId && !isEditing && (
-                          <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover/msg:opacity-100">
-                            <button
-                              onClick={() => startEdit(m)}
-                              className="rounded-full p-1 text-muted hover:text-foreground"
-                              title="Edit"
-                            >
-                              <Pencil size={13} />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteMessage(m.clientId!)}
-                              className="rounded-full p-1 text-muted hover:text-red-400"
-                              title="Delete"
-                            >
-                              <Trash2 size={13} />
-                            </button>
-                            <button
-                              onClick={() => setPinnedMessage(groupId, isPinned ? null : m.clientId!)}
-                              className="rounded-full p-1 text-muted hover:text-foreground"
-                              title={isPinned ? "Unpin" : "Pin message"}
-                            >
-                              {isPinned ? <PinOff size={13} /> : <Pin size={13} />}
-                            </button>
-                          </div>
-                        )}
-                        {isEditing ? (
-                          <div className="flex items-center gap-1">
-                            <input
-                              autoFocus
-                              value={editDraft}
-                              onChange={(e) => setEditDraft(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") saveEdit();
-                                if (e.key === "Escape") cancelEdit();
-                              }}
-                              className="input-field !py-1 !text-sm"
-                            />
-                            <button onClick={saveEdit} className="rounded-full p-1 text-emerald-400 hover:bg-surface-2" title="Save">
-                              <Check size={14} />
-                            </button>
-                            <button onClick={cancelEdit} className="rounded-full p-1 text-muted hover:bg-surface-2" title="Cancel">
-                              <X size={14} />
-                            </button>
-                          </div>
-                        ) : (
-                          <motion.div
-                            initial={{ opacity: 0, y: 6, scale: 0.97 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            transition={{ type: "spring", stiffness: 500, damping: 34 }}
-                            className={`flex flex-col gap-1 rounded-2xl px-4 py-2 text-sm ${
-                              isMine ? "bg-gradient-to-br from-accent-bright to-accent text-black" : "bg-surface-2 text-foreground"
-                            } ${isPinned ? "ring-2 ring-accent-bright/50" : ""}`}
+                      <button
+                        onClick={openProfile}
+                        onContextMenu={openContextMenu}
+                        className="flex items-center gap-1.5 text-left transition-colors hover:text-foreground"
+                      >
+                        <span className="text-sm font-medium text-foreground">{senderName}</span>
+                        <CosmeticBadge badgeId={senderBadge} />
+                        {tag && tagEquippedCodes.has(group.senderCode) && <TagChip tag={tag} />}
+                        {senderRole && <RoleChip role={senderRole} />}
+                      </button>
+                      <span className="text-[11px] text-muted">{formatMessageTime(first.sentAt)}</span>
+                    </div>
+
+                    <div className="flex flex-col">
+                      {group.messages.map((m) => {
+                        const isPinned = !!m.clientId && m.clientId === pinnedClientId;
+                        const isEditing = !!m.clientId && editingClientId === m.clientId;
+                        const editedText = m.clientId ? edits[m.clientId] : undefined;
+                        const displayText = editedText ?? m.text;
+                        return (
+                          <div
+                            key={m.id}
+                            id={m.clientId ? `msg-${m.clientId}` : undefined}
+                            className={`group/msg flex items-start gap-2 rounded-lg px-1 py-0.5 transition-colors hover:bg-surface-2/20 ${
+                              isPinned ? "ring-1 ring-accent-bright/40" : ""
+                            }`}
                           >
-                            {m.imageDataUrl && (
-                              // eslint-disable-next-line @next/next/no-img-element -- data URI, not an optimizable remote/static asset
-                              <img src={m.imageDataUrl} alt="Attachment" className="max-h-64 max-w-full rounded-lg object-contain" />
+                            <span className="flex w-8 shrink-0 items-center justify-center pt-0.5 text-[10px] text-muted opacity-0 transition-opacity group-hover/msg:opacity-100">
+                              {formatMessageTime(m.sentAt)}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              {isEditing ? (
+                                <div className="flex items-center gap-1">
+                                  <input
+                                    autoFocus
+                                    value={editDraft}
+                                    onChange={(e) => setEditDraft(e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") saveEdit();
+                                      if (e.key === "Escape") cancelEdit();
+                                    }}
+                                    className="input-field !py-1 !text-sm"
+                                  />
+                                  <button onClick={saveEdit} className="rounded-full p-1 text-emerald-400 hover:bg-surface-2" title="Save">
+                                    <Check size={14} />
+                                  </button>
+                                  <button onClick={cancelEdit} className="rounded-full p-1 text-muted hover:bg-surface-2" title="Cancel">
+                                    <X size={14} />
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="flex flex-col gap-1 text-sm text-foreground">
+                                  {m.imageDataUrl && (
+                                    // eslint-disable-next-line @next/next/no-img-element -- data URI, not an optimizable remote/static asset
+                                    <img
+                                      src={m.imageDataUrl}
+                                      alt="Attachment"
+                                      className="max-h-64 max-w-full rounded-lg object-contain"
+                                    />
+                                  )}
+                                  {displayText && (
+                                    <span>
+                                      {renderMessageContent(displayText, emoji, allMembers, displayChannels, setActiveChannelId)}
+                                      {editedText !== undefined && <span className="ml-1 text-[10px] opacity-60">(edited)</span>}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                              {m.clientId && (
+                                <MessageReactions
+                                  reactions={reactions[m.clientId]}
+                                  myCode={myCode}
+                                  align="start"
+                                  onToggle={(emojiName) => toggleReaction(reactionsPath, m.clientId!, emojiName, myCode)}
+                                />
+                              )}
+                            </div>
+                            {!isEditing && m.clientId && (
+                              <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover/msg:opacity-100">
+                                {isMineGroup && (
+                                  <>
+                                    <button
+                                      onClick={() => startEdit(m)}
+                                      className="rounded-full p-1 text-muted hover:text-foreground"
+                                      title="Edit"
+                                    >
+                                      <Pencil size={13} />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteMessage(m.clientId!)}
+                                      className="rounded-full p-1 text-muted hover:text-red-400"
+                                      title="Delete"
+                                    >
+                                      <Trash2 size={13} />
+                                    </button>
+                                  </>
+                                )}
+                                <button
+                                  onClick={() => setPinnedMessage(groupId, isPinned ? null : m.clientId!)}
+                                  className="rounded-full p-1 text-muted hover:text-foreground"
+                                  title={isPinned ? "Unpin" : "Pin message"}
+                                >
+                                  {isPinned ? <PinOff size={13} /> : <Pin size={13} />}
+                                </button>
+                              </div>
                             )}
-                            {displayText && (
-                              <span>
-                                {renderMessageContent(displayText, emoji, allMembers, displayChannels, setActiveChannelId)}
-                                {editedText !== undefined && <span className="ml-1 text-[10px] opacity-60">(edited)</span>}
-                              </span>
-                            )}
-                          </motion.div>
-                        )}
-                        {!isMine && m.clientId && !isEditing && (
-                          <button
-                            onClick={() => setPinnedMessage(groupId, isPinned ? null : m.clientId!)}
-                            className="shrink-0 rounded-full p-1 text-muted opacity-0 transition-opacity hover:text-foreground group-hover/msg:opacity-100"
-                            title={isPinned ? "Unpin" : "Pin message"}
-                          >
-                            {isPinned ? <PinOff size={13} /> : <Pin size={13} />}
-                          </button>
-                        )}
-                      </div>
-                      {m.clientId && (
-                        <MessageReactions
-                          reactions={reactions[m.clientId]}
-                          myCode={myCode}
-                          align={isMine ? "end" : "start"}
-                          onToggle={(emoji) => toggleReaction(reactionsPath, m.clientId!, emoji, myCode)}
-                        />
-                      )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 );
