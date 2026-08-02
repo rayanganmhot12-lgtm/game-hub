@@ -93,6 +93,16 @@ on the exact `/friends` route, not on `/friends/game-hub` — an exact match
 check is required precisely because `/friends` is a string-prefix of the
 other two routes too).
 
+**Note on styling divergence:** the shipped `FriendsSidebar` intentionally
+does *not* match `w-72`/`border-r`/`bg-surface/40 backdrop-blur-xl` as stated
+above — it uses `md:w-52` with no border and no background instead, since it
+renders inside `<main>`'s own padded content area rather than as a direct
+sibling of `<main>` the way `Sidebar`/`ServerRail` are, so the sticky/
+full-viewport-height treatment described here doesn't apply. See
+`docs/superpowers/plans/2026-08-02-friends-subnav.md`, Task 2, for the full
+reasoning. This is a known, deliberate deviation from this spec, not a
+defect.
+
 ## 3. Game Hub Tab
 
 `src/app/(app)/friends/game-hub/page.tsx` — a page header ("Game Hub" /
