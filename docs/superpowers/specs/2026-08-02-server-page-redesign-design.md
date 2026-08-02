@@ -22,9 +22,10 @@ frontend-only redesign — no schema, API, or Firebase-shape changes.
 - **Channels sidebar** (`src/components/GroupChannelsSidebar.tsx`, main render
   ~L316-463): fixed `w-60` column with a banner-colored header dropdown (Invite
   People / Server Settings / Nickname / Mute / Leave / Delete), collapsible
-  categories, and channel rows. Active-channel and hover states exist but are subtle;
-  "+ Add Channel" / "+ Add Category" links are always visible rather than
-  appearing on hover.
+  categories, and channel rows. Active-channel and hover states exist but are subtle
+  (the active channel relies mainly on a text-color change rather than a strong
+  visual anchor). Adding/removing channels and categories is handled entirely in
+  the Server Settings modal's Channels tab, not the main sidebar.
 - **Member list** (`src/components/GroupMembersList.tsx`): already groups online
   members by hoisted role (role name as a colored section header, same pattern as
   Discord), with a separate "Online" bucket for no-role members and one "Offline"
@@ -109,11 +110,8 @@ categories/channels data model, collapse state, or add/remove logic:
 
 - Active channel gets a clear left accent-colored bar plus a light accent-tinted
   background fill, instead of relying mainly on text-color difference.
-- A clearer hover background for non-active channel rows.
-- "+ Add Channel" and "+ Add Category" affordances only render when the user is
-  hovering the relevant category section (or the uncategorized section), instead
-  of always being visible — reduces visual clutter for categories that already
-  have channels.
+- A clearer hover background for non-active channel rows, and for category
+  headers (which already toggle collapse/expand).
 - Slightly more generous, consistent vertical spacing between rows and category
   groups.
 
