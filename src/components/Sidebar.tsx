@@ -10,7 +10,7 @@ const baseLinks = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/library", label: "Library", icon: Library },
   { href: "/achievements", label: "Achievements", icon: Trophy },
-  { href: "/friends", label: "Community", icon: Users },
+  { href: "/friends", label: "Friends", icon: Users },
   { href: "/connect", label: "Connections", icon: Plug },
   { href: "/playlist", label: "Playlist", icon: Music2 },
   { href: "/store", label: "Store", icon: Gem },

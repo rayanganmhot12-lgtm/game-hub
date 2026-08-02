@@ -23,7 +23,7 @@ export default async function FriendsPage() {
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Community</h1>
+        <h1 className="text-2xl font-bold text-foreground">Friends</h1>
         <p className="text-sm text-muted">Friends, groups, and servers — add by code, chat, call, or join with an invite.</p>
       </div>
 

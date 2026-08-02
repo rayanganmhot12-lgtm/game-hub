@@ -73,7 +73,7 @@ export default function ServerRail({
       <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-[72px] shrink-0 flex-col items-center gap-2 overflow-y-auto border-r border-border/60 bg-surface/60 pb-3 pt-24 backdrop-blur-xl md:flex">
         <Link
           href="/friends"
-          title="Community"
+          title="Friends"
           className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-all duration-200 hover:scale-110 ${
             onCommunity ? "rounded-2xl bg-accent text-black" : "bg-surface-2 text-foreground hover:rounded-2xl hover:bg-accent/20"
           }`}
