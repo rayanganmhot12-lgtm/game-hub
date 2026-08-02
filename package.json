@@ -1,6 +1,6 @@
 {
   "name": "game-hub",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "private": true,
   "main": "electron/main.js",
   "scripts": {
@@ -71,6 +71,13 @@
       {
         "from": "prisma/dist-empty.db",
         "to": "standalone/dev.db"
+      },
+      {
+        "from": "prisma/migrations",
+        "to": "migrations",
+        "filter": [
+          "**/*"
+        ]
       },
       {
         "from": "uploads/music",

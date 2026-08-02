@@ -5,6 +5,7 @@ const fs = require("fs");
 const crypto = require("crypto");
 const { spawn, execFileSync } = require("child_process");
 const { autoUpdater } = require("electron-updater");
+const { applyPendingMigrations } = require("./migrate");
 
 require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
 
@@ -122,6 +123,32 @@ function startServer() {
     app.quit();
     return;
   }
+
+  // An existing install's database is whatever schema it was on when it was
+  // last used; the code we just shipped may need a newer one. Bring it
+  // forward before the server touches it — otherwise queries selecting
+  // columns that don't exist there throw on every request.
+  try {
+    const applied = applyPendingMigrations({
+      dbPath,
+      migrationsDir: path.join(process.resourcesPath, "migrations"),
+      betterSqlite3Path: path.join(process.resourcesPath, "standalone", "node_modules", "better-sqlite3"),
+    });
+    if (applied.length > 0) {
+      console.log(`Applied ${applied.length} pending database migration(s): ${applied.join(", ")}`);
+    }
+  } catch (err) {
+    // Starting anyway would just produce the unexplained 500 screen this
+    // whole mechanism exists to prevent — say what actually broke, and point
+    // at the pre-migration backup so the data is recoverable.
+    dialog.showErrorBox(
+      "Game Hub couldn't update its database",
+      `${err.message}\n\nYour previous database was backed up to:\n${dbPath}.pre-migration-backup`
+    );
+    app.quit();
+    return;
+  }
+
   const serverPath = path.join(process.resourcesPath, "standalone", "server.js");
   serverProcess = spawn(process.execPath, [serverPath], {
     cwd: path.dirname(serverPath),
