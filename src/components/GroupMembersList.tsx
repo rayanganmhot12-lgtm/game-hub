@@ -112,7 +112,9 @@ export default function GroupMembersList({
             <span className="absolute -bottom-0.5 -right-0.5 block h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-surface" />
           )}
         </div>
-        <span className="truncate text-sm text-foreground">{member.displayName}</span>
+        <span className={`truncate text-sm ${role ? tagColorClassName(role.color) : "text-foreground"}`}>
+          {member.displayName}
+        </span>
         <CosmeticBadge badgeId={profile?.badge ?? member.badge} />
         {tag && member.tagEquipped && <TagChip tag={tag} />}
       </button>
