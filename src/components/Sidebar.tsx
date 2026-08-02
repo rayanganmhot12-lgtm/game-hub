@@ -3,23 +3,20 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { LayoutDashboard, Library, Trophy, Plug, Music2, Gem, Palette, Sparkles, Users, ShieldAlert } from "lucide-react";
+import { LayoutDashboard, Library, Trophy, Plug, Palette, Sparkles, Users } from "lucide-react";
 import UserPanel from "@/components/UserPanel";
 
-const baseLinks = [
+const links = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/library", label: "Library", icon: Library },
   { href: "/achievements", label: "Achievements", icon: Trophy },
   { href: "/friends", label: "Friends", icon: Users },
   { href: "/connect", label: "Connections", icon: Plug },
-  { href: "/playlist", label: "Playlist", icon: Music2 },
-  { href: "/store", label: "Store", icon: Gem },
   { href: "/theme-editor", label: "Theme Editor", icon: Palette },
   { href: "/recap", label: "Recap", icon: Sparkles },
 ];
 
 export default function Sidebar({
-  isAdmin,
   displayName,
   avatarDataUrl,
   friendCode,
@@ -29,7 +26,6 @@ export default function Sidebar({
   nameEffectColor1,
   nameEffectColor2,
 }: {
-  isAdmin: boolean;
   displayName: string;
   avatarDataUrl: string | null;
   friendCode: string;
@@ -40,9 +36,6 @@ export default function Sidebar({
   nameEffectColor2: string | null;
 }) {
   const pathname = usePathname();
-  const links = isAdmin
-    ? [...baseLinks, { href: "/moderation", label: "Moderation", icon: ShieldAlert }]
-    : baseLinks;
 
   // Inside a server, the server rail + channel sidebar take over as
   // navigation — the main app nav would just be redundant clutter.

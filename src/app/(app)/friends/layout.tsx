@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser, getDisplayName } from "@/lib/auth";
 import { getOrCreateFriendCode } from "@/lib/friendCodeServer";
+import { isAdminEmail } from "@/lib/admin";
 import FriendsSidebar from "@/components/FriendsSidebar";
 
 export default async function FriendsLayout({ children }: { children: React.ReactNode }) {
@@ -10,10 +11,12 @@ export default async function FriendsLayout({ children }: { children: React.Reac
   }
   const myFriendCode = await getOrCreateFriendCode(user.id);
   const myDisplayName = getDisplayName(user);
+  const isAdmin = isAdminEmail(user.email);
 
   return (
     <div className="flex flex-col gap-4 md:flex-row md:gap-6">
       <FriendsSidebar
+        isAdmin={isAdmin}
         displayName={myDisplayName}
         avatarDataUrl={user.avatarDataUrl}
         friendCode={myFriendCode}

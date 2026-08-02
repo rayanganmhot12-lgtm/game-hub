@@ -83,7 +83,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                 friends={friends}
               />
               <Sidebar
-                isAdmin={isAdmin}
                 displayName={myDisplayName}
                 avatarDataUrl={user.avatarDataUrl}
                 friendCode={myFriendCode}
