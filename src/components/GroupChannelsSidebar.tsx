@@ -302,10 +302,11 @@ export default function GroupChannelsSidebar({
       <button
         key={channel.id}
         onClick={() => onSelectChannel(channel.id)}
-        className={`flex w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-left text-sm font-medium transition-colors ${
-          active ? "bg-surface-2/60 text-foreground" : "text-muted hover:bg-surface-2/30 hover:text-foreground"
+        className={`relative flex w-full items-center gap-1.5 rounded-lg py-1.5 pl-3 pr-2 text-left text-sm font-medium transition-colors ${
+          active ? "bg-accent/10 text-foreground" : "text-muted hover:bg-surface-2/40 hover:text-foreground"
         }`}
       >
+        {active && <span className="absolute left-0 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-full bg-accent-bright" />}
         <Hash size={16} className="shrink-0" />
         <span className={`truncate ${unread ? "text-foreground" : ""}`}>{channel.name}</span>
         {unread && <span className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-accent-bright" />}
@@ -393,22 +394,22 @@ export default function GroupChannelsSidebar({
 
       <div className="flex-1 overflow-y-auto p-2">
         {uncategorized.length > 0 && (
-          <div className="mb-2 flex flex-col gap-0.5">{uncategorized.map(renderChannelRow)}</div>
+          <div className="mb-3 flex flex-col gap-1">{uncategorized.map(renderChannelRow)}</div>
         )}
 
         {sortedCategories.map((cat) => {
           const isCollapsed = collapsed.has(cat.id);
           const catChannels = displayChannels.filter((c) => c.categoryId === cat.id).sort((a, b) => a.position - b.position);
           return (
-            <div key={cat.id} className="mb-2">
+            <div key={cat.id} className="mb-3">
               <button
                 onClick={() => toggleCollapsed(cat.id)}
-                className="flex w-full items-center gap-1 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted hover:text-foreground"
+                className="flex w-full items-center gap-1 rounded px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted transition-colors hover:bg-surface-2/30 hover:text-foreground"
               >
                 {isCollapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
                 {cat.name}
               </button>
-              {!isCollapsed && <div className="flex flex-col gap-0.5">{catChannels.map(renderChannelRow)}</div>}
+              {!isCollapsed && <div className="mt-0.5 flex flex-col gap-1">{catChannels.map(renderChannelRow)}</div>}
             </div>
           );
         })}
