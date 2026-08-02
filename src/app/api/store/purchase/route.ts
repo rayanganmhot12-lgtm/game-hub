@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getCosmetic, priceFor, PLUS_ITEM_ID } from "@/lib/cosmetics";
+import { priceFor, PLUS_ITEM_ID } from "@/lib/cosmetics";
+import { getPricedCatalog } from "@/lib/storePricesServer";
 
 export async function POST(request: NextRequest) {
   const user = await getCurrentUser();
@@ -11,7 +12,9 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json();
   const itemId = body.itemId;
-  const item = typeof itemId === "string" ? getCosmetic(itemId) : undefined;
+  // Priced catalog, not the raw one — the developer's overrides are what
+  // this purchase has to be charged at.
+  const item = typeof itemId === "string" ? getPricedCatalog().find((c) => c.id === itemId) : undefined;
   if (!item) {
     return NextResponse.json({ error: "Unknown item" }, { status: 400 });
   }

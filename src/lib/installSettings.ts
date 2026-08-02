@@ -3,6 +3,10 @@ import path from "path";
 
 export interface InstallSettings {
   steamApiKey?: string;
+  // Store price overrides the developer account set, keyed by cosmetic id.
+  // Mirrored here from the Firebase relay so the purchase route can read
+  // them synchronously and stay the authority on what an item costs.
+  storePrices?: Record<string, number>;
 }
 
 // Where per-install (not per-account) config lives — the same directory
@@ -23,8 +27,21 @@ export function readInstallSettings(): InstallSettings {
     const raw = fs.readFileSync(settingsPath(), "utf8");
     const parsed: unknown = JSON.parse(raw);
     if (typeof parsed !== "object" || parsed === null) return {};
-    const steamApiKey = (parsed as Record<string, unknown>).steamApiKey;
-    return typeof steamApiKey === "string" ? { steamApiKey } : {};
+    const fields = parsed as Record<string, unknown>;
+
+    // Every known field has to be read back here, not just the one a given
+    // caller wants: writeInstallSettings merges over whatever this returns,
+    // so a field dropped on read would be erased on the next write.
+    const settings: InstallSettings = {};
+    if (typeof fields.steamApiKey === "string") settings.steamApiKey = fields.steamApiKey;
+    if (typeof fields.storePrices === "object" && fields.storePrices !== null) {
+      const prices: Record<string, number> = {};
+      for (const [itemId, cost] of Object.entries(fields.storePrices as Record<string, unknown>)) {
+        if (typeof cost === "number" && Number.isInteger(cost) && cost >= 0) prices[itemId] = cost;
+      }
+      if (Object.keys(prices).length > 0) settings.storePrices = prices;
+    }
+    return settings;
   } catch {
     return {};
   }

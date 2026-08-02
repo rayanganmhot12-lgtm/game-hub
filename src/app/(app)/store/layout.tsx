@@ -1,7 +1,7 @@
 import { getCurrentUser, getDisplayName } from "@/lib/auth";
 import { getOrCreateFriendCode } from "@/lib/friendCodeServer";
 import { isAdminEmail } from "@/lib/admin";
-import { COSMETIC_CATALOG } from "@/lib/cosmetics";
+import { getPricedCatalog } from "@/lib/storePricesServer";
 import StoreSidebar from "@/components/StoreSidebar";
 import StorePlusPromo from "@/components/StorePlusPromo";
 import StoreProfilePreview from "@/components/StoreProfilePreview";
@@ -9,7 +9,8 @@ import StoreProfilePreview from "@/components/StoreProfilePreview";
 export default async function StoreLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
   const isDev = isAdminEmail(user!.email);
-  const catalog = isDev ? COSMETIC_CATALOG : COSMETIC_CATALOG.filter((c) => !c.adminOnly);
+  const priced = getPricedCatalog();
+  const catalog = isDev ? priced : priced.filter((c) => !c.adminOnly);
   const unlockedCosmetics: string[] = user!.unlockedCosmetics ? JSON.parse(user!.unlockedCosmetics) : [];
   const myFriendCode = await getOrCreateFriendCode(user!.id);
   const myDisplayName = getDisplayName(user!);
