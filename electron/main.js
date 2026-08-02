@@ -68,6 +68,25 @@ function getOrCreateSessionSecret() {
   return sessionSecret;
 }
 
+// scripts/prepare-standalone.js strips ADMIN_EMAIL out of the packaged .env,
+// so no copy of the app grants the moderation and store-admin panels to
+// whoever installs it. That leaves the developer's own install with no way to
+// reach those panels either, short of launching the app from a shell that
+// happens to export the variable. This reads it back from the per-install
+// settings.json instead — a file only the person at that machine can write,
+// so enabling it here never travels to anyone else's copy.
+function getAdminEmail(userDataDir) {
+  try {
+    const settings = JSON.parse(fs.readFileSync(path.join(userDataDir, "settings.json"), "utf8"));
+    if (typeof settings.adminEmail === "string" && settings.adminEmail.trim()) {
+      return settings.adminEmail.trim();
+    }
+  } catch {
+    // No settings file yet, or unreadable — this install simply has no admin.
+  }
+  return undefined;
+}
+
 // The live database and uploaded music files must live in Electron's
 // userData directory, never inside the install directory: NSIS's update
 // flow deletes the entire install directory on every update (its
@@ -150,11 +169,16 @@ function startServer() {
   }
 
   const serverPath = path.join(process.resourcesPath, "standalone", "server.js");
+  const adminEmail = getAdminEmail(userDataDir);
   serverProcess = spawn(process.execPath, [serverPath], {
     cwd: path.dirname(serverPath),
     stdio: "inherit",
     env: {
       ...process.env,
+      // Only set when settings.json names one, so an install without it keeps
+      // inheriting nothing rather than an empty string isAdminEmail would
+      // still have to special-case.
+      ...(adminEmail ? { ADMIN_EMAIL: adminEmail } : {}),
       PORT: String(PORT),
       NODE_ENV: "production",
       SESSION_SECRET: getOrCreateSessionSecret(),
