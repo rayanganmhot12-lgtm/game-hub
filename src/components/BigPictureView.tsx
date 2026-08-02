@@ -6,6 +6,7 @@ import Image from "next/image";
 import { X, Play, Gamepad2 } from "lucide-react";
 import type { OwnedGameSummary } from "@/lib/games";
 import { formatPlaytime } from "@/lib/format";
+import { launchGame } from "@/lib/launchGame";
 
 export default function BigPictureView({ games }: { games: OwnedGameSummary[] }) {
   const router = useRouter();
@@ -39,8 +40,8 @@ export default function BigPictureView({ games }: { games: OwnedGameSummary[] })
   useEffect(() => {
     function launchFocused() {
       const game = games[focusedIndex];
-      if (game?.platformGameId && game.platform === "STEAM") {
-        window.location.href = `steam://run/${game.platformGameId}`;
+      if (game?.platformGameId) {
+        launchGame(game.platform, game.platformGameId);
       }
     }
 
@@ -101,8 +102,8 @@ export default function BigPictureView({ games }: { games: OwnedGameSummary[] })
                 }}
                 onMouseEnter={() => setFocusedIndex(index)}
                 onClick={() => {
-                  if (game.platformGameId && game.platform === "STEAM") {
-                    window.location.href = `steam://run/${game.platformGameId}`;
+                  if (game.platformGameId) {
+                    launchGame(game.platform, game.platformGameId);
                   }
                 }}
                 className={`group flex cursor-pointer flex-col overflow-hidden rounded-2xl border-2 bg-surface transition-all duration-150 ${

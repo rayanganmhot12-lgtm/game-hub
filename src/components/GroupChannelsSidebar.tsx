@@ -58,6 +58,7 @@ import {
   deleteGroupEverywhere,
 } from "@/lib/groupRealtime";
 import { useGroupCall } from "@/context/GroupCallContext";
+import { listenForGroupCallParticipants } from "@/lib/groupCallRealtime";
 import { useCall } from "@/context/CallContext";
 import ServerUserPanel from "@/components/ServerUserPanel";
 import ProfileAvatar from "@/components/ProfileAvatar";
@@ -149,6 +150,9 @@ export default function GroupChannelsSidebar({
   const { activeGroupCall, joinGroupCall } = useGroupCall();
   const { activeCall } = useCall();
   const [joiningVoice, setJoiningVoice] = useState(false);
+  // Voice is per-server (joinGroupCall takes a groupId, not a channel id), so
+  // this one roster is who's in voice for the whole server.
+  const [voicePeers, setVoicePeers] = useState<Array<{ code: string; displayName: string }>>([]);
   const [liveName, setLiveName] = useState(groupName);
   const [icon, setIcon] = useState<string | null>(null);
   const [profile, setProfile] = useState<GroupProfile>({});
@@ -170,6 +174,10 @@ export default function GroupChannelsSidebar({
 
   useEffect(() => {
     return listenForGroupIcon(groupId, setIcon);
+  }, [groupId]);
+
+  useEffect(() => {
+    return listenForGroupCallParticipants(groupId, setVoicePeers);
   }, [groupId]);
 
   useEffect(() => {
@@ -285,22 +293,39 @@ export default function GroupChannelsSidebar({
       const connectedHere = activeGroupCall?.groupId === groupId;
       const inOtherCall = Boolean(activeGroupCall) && !connectedHere;
       return (
-        <button
-          key={channel.id}
-          type="button"
-          onClick={handleJoinVoice}
-          disabled={joiningVoice || connectedHere || inOtherCall}
-          title={inOtherCall ? "Leave your current voice call first" : connectedHere ? "You're connected" : "Join voice"}
-          className={`flex w-full items-center gap-1.5 rounded-lg py-1.5 pl-3 pr-2 text-left text-sm transition-colors disabled:cursor-default ${
-            connectedHere
-              ? "bg-accent/15 text-accent-bright"
-              : "text-muted hover:bg-surface-2/40 hover:text-foreground disabled:hover:bg-transparent"
-          }`}
-        >
-          <Volume2 size={16} className="shrink-0" />
-          <span className="flex-1 truncate">{channel.name}</span>
-          {connectedHere && <span className="text-[10px] font-semibold uppercase tracking-wide">Connected</span>}
-        </button>
+        <div key={channel.id}>
+          <button
+            type="button"
+            onClick={handleJoinVoice}
+            disabled={joiningVoice || connectedHere || inOtherCall}
+            title={inOtherCall ? "Leave your current voice call first" : connectedHere ? "You're connected" : "Join voice"}
+            className={`flex w-full items-center gap-1.5 rounded-lg py-1.5 pl-3 pr-2 text-left text-sm transition-colors disabled:cursor-default ${
+              connectedHere
+                ? "bg-accent/15 text-accent-bright"
+                : "text-muted hover:bg-surface-2/40 hover:text-foreground disabled:hover:bg-transparent"
+            }`}
+          >
+            <Volume2 size={16} className="shrink-0" />
+            <span className="flex-1 truncate">{channel.name}</span>
+            {voicePeers.length > 0 && (
+              <span className="shrink-0 text-[10px] font-semibold tabular-nums text-muted">{voicePeers.length}</span>
+            )}
+          </button>
+
+          {/* Who's actually in voice — the roster is per-server (see the
+              voicePeers subscription), so it hangs under the voice channel
+              the same way Discord lists connected members. */}
+          {voicePeers.length > 0 && (
+            <div className="mt-0.5 flex flex-col gap-0.5 pl-8">
+              {voicePeers.map((peer) => (
+                <div key={peer.code} className="flex items-center gap-1.5 py-0.5 text-xs text-muted">
+                  <Volume2 size={11} className="shrink-0 text-emerald-400" />
+                  <span className="truncate">{peer.displayName}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       );
     }
     const unread = !active && !!unreadChannelIds?.has(channel.id);

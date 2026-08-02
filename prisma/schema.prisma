@@ -73,6 +73,26 @@ model User {
   chatMessages         ChatMessage[]
   groups               Group[]
   notifications        Notification[]
+  missions             MissionProgress[]
+}
+
+// One row per mission a user has made progress on. Kept as its own table
+// rather than columns on User so adding a mission later is a catalog entry
+// (see src/lib/missions.ts) with no migration — the reward itself is read
+// from that catalog, never stored here, so re-pricing a mission doesn't
+// need a data backfill.
+model MissionProgress {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  missionId   String
+  // Set when the mission's goal is met, cleared only by claiming it.
+  completedAt DateTime?
+  // Set when the reward has been paid out. Non-null means "never pay again"
+  // — this is what makes a one-time mission genuinely one-time.
+  claimedAt   DateTime?
+
+  @@unique([userId, missionId])
 }
 
 // A persistent local log of one-shot events that would otherwise just be a

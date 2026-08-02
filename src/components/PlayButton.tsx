@@ -1,12 +1,7 @@
 "use client";
 
 import { Play } from "lucide-react";
-
-function launch(platform: string, platformGameId: string) {
-  if (platform === "STEAM") {
-    window.location.href = `steam://run/${platformGameId}`;
-  }
-}
+import { launchGame as launch } from "@/lib/launchGame";
 
 export function PlayButton({
   platform,

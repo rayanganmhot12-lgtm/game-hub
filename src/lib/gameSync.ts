@@ -88,18 +88,23 @@ export async function syncSteamLibrary(accountId: string, steamId: string): Prom
   return { count: games.length, newAchievements, pointsEarned };
 }
 
-// Mock in-app currency — a small reward loop tied to real usage (achievement
-// unlocks, new playtime logged), not real money. Every sync earns something.
+// Mock in-app currency — a small reward loop tied to real usage, not real
+// money. Rewards are strictly proportional to new progress: there is
+// deliberately no flat per-sync bonus, because syncing is a button anyone
+// can press on demand, so a flat bonus was farmable for unlimited points.
 async function awardPoints(accountId: string, newAchievementCount: number, newMinutesPlayed: number) {
-  const account = await prisma.account.findUnique({ where: { id: accountId }, select: { userId: true } });
-  if (!account) return 0;
-
-  const SYNC_BONUS = 10;
   const POINTS_PER_ACHIEVEMENT = 5;
   const POINTS_PER_30_MIN = 1;
 
   const earned =
-    SYNC_BONUS + newAchievementCount * POINTS_PER_ACHIEVEMENT + Math.floor(newMinutesPlayed / 30) * POINTS_PER_30_MIN;
+    newAchievementCount * POINTS_PER_ACHIEVEMENT + Math.floor(newMinutesPlayed / 30) * POINTS_PER_30_MIN;
+
+  // A sync that surfaced nothing new is worth nothing — skip the write
+  // entirely rather than incrementing by zero.
+  if (earned <= 0) return 0;
+
+  const account = await prisma.account.findUnique({ where: { id: accountId }, select: { userId: true } });
+  if (!account) return 0;
 
   await prisma.user.update({
     where: { id: account.userId },
