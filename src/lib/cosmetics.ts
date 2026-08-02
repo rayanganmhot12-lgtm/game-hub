@@ -83,6 +83,13 @@ export const COSMETIC_CATALOG: CosmeticItem[] = [
     cost: 450,
   },
   {
+    id: "banner-neon-glow",
+    type: "banner",
+    name: "Neon Glow Banner",
+    description: "A glowing blue-to-purple neon light sweeping across your profile banner.",
+    cost: 600,
+  },
+  {
     id: PLUS_ITEM_ID,
     type: "membership",
     name: "Game Hub Plus",

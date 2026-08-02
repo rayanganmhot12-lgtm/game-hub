@@ -34,6 +34,7 @@ export function CosmeticBadge({ badgeId }: { badgeId?: string | null }) {
 const BANNER_CLASSES: Record<string, string> = {
   "banner-shimmer": "banner-shimmer",
   "banner-aurora": "banner-aurora",
+  "banner-neon-glow": "banner-neon-glow",
 };
 
 export function CosmeticBanner({ bannerId, children }: { bannerId?: string | null; children: ReactNode }) {
