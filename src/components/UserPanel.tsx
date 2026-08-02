@@ -9,12 +9,14 @@ export default function UserPanel({
   friendCode,
   equippedFrame,
   equippedBadge,
+  nameEffect,
 }: {
   displayName: string;
   avatarDataUrl: string | null;
   friendCode: string;
   equippedFrame: string | null;
   equippedBadge: string | null;
+  nameEffect: string | null;
 }) {
   return (
     <div className="flex items-center gap-2.5 border-t border-border/60 bg-surface-2/40 px-3 py-3">
@@ -40,7 +42,13 @@ export default function UserPanel({
           )}
         </CosmeticFrame>
         <div className="min-w-0">
-          <p className="truncate text-base font-medium text-foreground">{displayName}</p>
+          <p
+            className={`truncate text-base font-medium ${
+              nameEffect === "gradient-cycle" ? "name-gradient-cycle" : "text-foreground"
+            }`}
+          >
+            {displayName}
+          </p>
           <p className="truncate text-xs text-muted">{formatFriendCode(friendCode)}</p>
         </div>
       </Link>

@@ -3,6 +3,7 @@ import { getCurrentUser, getDisplayName } from "@/lib/auth";
 import { isAdminEmail } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
 import ModerationPanel from "@/components/ModerationPanel";
+import AdminPanel from "@/components/AdminPanel";
 
 export default async function ModerationPage() {
   const user = await getCurrentUser();
@@ -28,6 +29,7 @@ export default async function ModerationPage() {
         <p className="text-sm text-muted">Warn, mute, timeout, or ban a user by their friend code.</p>
       </div>
       <ModerationPanel myDisplayName={myDisplayName} initialActions={actions} friends={friends} />
+      <AdminPanel initialNameEffect={user.nameEffect} />
     </div>
   );
 }

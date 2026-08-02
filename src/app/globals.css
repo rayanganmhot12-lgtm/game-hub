@@ -295,6 +295,19 @@ body {
   background: linear-gradient(135deg, #ffe0ec, #ff9ec7);
   color: #c2185b;
 }
+.name-gradient-cycle {
+  background: linear-gradient(90deg, var(--accent-bright), #a855f7, var(--accent-bright));
+  background-size: 200% auto;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: name-gradient-shift 3s linear infinite;
+}
+@keyframes name-gradient-shift {
+  to {
+    background-position: -200% center;
+  }
+}
 
 .banner-shimmer::after,
 .banner-aurora::after {
@@ -336,7 +349,8 @@ body {
   .frame-gold,
   .frame-neon-pulse,
   .banner-shimmer::after,
-  .banner-aurora::after {
+  .banner-aurora::after,
+  .name-gradient-cycle {
     animation: none;
   }
 }

@@ -59,6 +59,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             banner={user.equippedBanner}
             accentColor={user.accentColor}
             pinnedCosmeticId={user.pinnedCosmeticId}
+            nameEffect={user.nameEffect}
           />
           <PresenceHeartbeat myCode={myFriendCode} />
           <WarningOverlay myCode={myFriendCode} />
@@ -86,6 +87,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                 friendCode={myFriendCode}
                 equippedFrame={user.equippedFrame}
                 equippedBadge={user.equippedBadge}
+                nameEffect={user.nameEffect}
               />
               <main className="flex-1 p-4 pb-24 md:p-6 md:pb-24">
                 <PageTransition>{children}</PageTransition>

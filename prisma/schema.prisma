@@ -53,6 +53,10 @@ model User {
   // A "banner" cosmetic id (animated shimmer/aurora overlay) — same pattern
   // as equippedFrame/equippedBadge.
   equippedBanner       String?
+  // Self-only cosmetic, admin account only in practice: an animated
+  // two-color gradient effect for the display name. "gradient-cycle" or
+  // unset — no other values, no color picker.
+  nameEffect           String?
   // Plus-exclusive: a custom hex color for this user's profile card border
   // glow, shown to friends viewing their profile.
   accentColor          String?

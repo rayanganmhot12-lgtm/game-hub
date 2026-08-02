@@ -17,6 +17,8 @@ export interface PublicProfile {
   pronouns?: string | null;
   profileNote?: string | null;
   badge?: string | null;
+  // "gradient-cycle" or unset — see the .name-gradient-cycle CSS class.
+  nameEffect?: string | null;
   frame?: string | null;
   banner?: string | null;
   accentColor?: string | null;

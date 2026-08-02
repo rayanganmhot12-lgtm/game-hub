@@ -25,6 +25,7 @@ export default function Sidebar({
   friendCode,
   equippedFrame,
   equippedBadge,
+  nameEffect,
 }: {
   isAdmin: boolean;
   displayName: string;
@@ -32,6 +33,7 @@ export default function Sidebar({
   friendCode: string;
   equippedFrame: string | null;
   equippedBadge: string | null;
+  nameEffect: string | null;
 }) {
   const pathname = usePathname();
   const links = isAdmin
@@ -75,6 +77,7 @@ export default function Sidebar({
           friendCode={friendCode}
           equippedFrame={equippedFrame}
           equippedBadge={equippedBadge}
+          nameEffect={nameEffect}
         />
       </div>
     </aside>

@@ -207,7 +207,13 @@ export default function FriendProfileModal({
             </div>
 
             <div className="mt-3 flex items-center gap-2">
-              <h2 className="text-lg font-bold text-foreground">{displayName}</h2>
+              <h2
+                className={`text-lg font-bold ${
+                  profile?.nameEffect === "gradient-cycle" ? "name-gradient-cycle" : "text-foreground"
+                }`}
+              >
+                {displayName}
+              </h2>
               <CosmeticBadge badgeId={badge} />
               {profile?.tag && <TagChip tag={profile.tag} />}
             </div>

@@ -19,6 +19,7 @@ export default function ProfilePublisher({
   banner,
   accentColor,
   pinnedCosmeticId,
+  nameEffect,
 }: {
   myCode: string;
   displayName: string;
@@ -32,6 +33,7 @@ export default function ProfilePublisher({
   banner: string | null;
   accentColor: string | null;
   pinnedCosmeticId: string | null;
+  nameEffect: string | null;
 }) {
   useEffect(() => {
     publishMyProfile(myCode, {
@@ -46,6 +48,7 @@ export default function ProfilePublisher({
       banner,
       accentColor,
       pinnedCosmeticId,
+      nameEffect,
     });
   }, [
     myCode,
@@ -60,6 +63,7 @@ export default function ProfilePublisher({
     banner,
     accentColor,
     pinnedCosmeticId,
+    nameEffect,
   ]);
 
   return null;
