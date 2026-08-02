@@ -93,7 +93,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                 nameEffectColor1={user.nameEffectColor1}
                 nameEffectColor2={user.nameEffectColor2}
               />
-              <main className="flex-1 p-4 pb-24 md:p-6 md:pb-24">
+              <main className="flex-1 p-4 pt-24 md:p-6 md:pt-24">
                 <PageTransition>{children}</PageTransition>
               </main>
             </div>

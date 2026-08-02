@@ -45,7 +45,7 @@ export default function MusicPlayerBar() {
         </button>
       )}
 
-      <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-border/60 bg-surface/80 px-4 py-2 backdrop-blur-xl">
+      <div className="fixed left-0 right-0 top-16 z-30 border-b border-border/60 bg-surface/80 px-4 py-2 backdrop-blur-xl">
         <div className="flex items-center gap-3">
           <div className="flex min-w-0 flex-1 items-center gap-2">
             <Music2 size={16} className="shrink-0 text-accent-bright" />
