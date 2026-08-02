@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Camera, Image as ImageIcon, Trash2, Palette } from "lucide-react";
 import { useToast } from "@/context/ToastContext";
 import { CosmeticFrame, CosmeticBanner } from "@/components/CosmeticFrame";
+import NebulaBackdrop from "@/components/NebulaBackdrop";
 
 const AVATAR_SIZE = 256;
 const BANNER_WIDTH = 600;
@@ -274,10 +275,12 @@ export default function ProfileManager({
 
   return (
     <div className="mx-auto flex max-w-md flex-col gap-6">
-      <div
-        className="panel overflow-hidden !p-0"
-        style={accentColor ? { borderColor: accentColor, boxShadow: `0 0 24px -6px ${accentColor}` } : undefined}
-      >
+      <div className="relative">
+        {equippedBanner === "banner-nebula" && <NebulaBackdrop />}
+        <div
+          className="panel overflow-hidden !p-0"
+          style={accentColor ? { borderColor: accentColor, boxShadow: `0 0 24px -6px ${accentColor}` } : undefined}
+        >
         <div className="relative h-32 w-full bg-surface-2">
           <CosmeticBanner bannerId={equippedBanner}>
             {bannerDataUrl ? (
@@ -372,6 +375,7 @@ export default function ProfileManager({
           disabled={savingBanner}
           className="hidden"
         />
+        </div>
       </div>
 
       <div className="panel flex flex-col gap-3 p-6">

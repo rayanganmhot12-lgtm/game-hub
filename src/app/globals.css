@@ -373,6 +373,23 @@ body {
   background-size: 200% 200%;
   animation: banner-nebula-drift 16s ease-in-out infinite;
 }
+/* Sits behind the whole card (see NebulaBackdrop.tsx) so the scene reads as
+   continuing past the card's own edges instead of being clipped by it. */
+.nebula-backdrop {
+  background:
+    radial-gradient(circle at 20% 65%, #fff 0%, transparent 1.4%),
+    radial-gradient(circle at 40% 25%, #fff 0%, transparent 1.1%),
+    radial-gradient(circle at 65% 60%, #fff 0%, transparent 0.9%),
+    radial-gradient(circle at 82% 20%, #fff 0%, transparent 1.3%),
+    radial-gradient(circle at 90% 70%, #fff 0%, transparent 1%),
+    radial-gradient(ellipse 60% 55% at 50% 55%, rgba(244, 114, 182, 0.55), transparent 72%),
+    radial-gradient(circle at 58% 62%, #fbcfe8 0%, #f472b6 40%, #be185d 68%, transparent 78%);
+  background-size: 200% 200%;
+  filter: blur(1px);
+  mask-image: radial-gradient(ellipse 65% 80% at 50% 60%, black 45%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 65% 80% at 50% 60%, black 45%, transparent 100%);
+  animation: banner-nebula-drift 20s ease-in-out infinite;
+}
 @keyframes banner-shimmer-sweep {
   0% {
     background-position: 150% 0;
@@ -416,6 +433,7 @@ body {
   .banner-aurora::after,
   .banner-neon-glow,
   .banner-nebula::after,
+  .nebula-backdrop,
   .name-gradient-cycle {
     animation: none;
   }

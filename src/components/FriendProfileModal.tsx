@@ -9,6 +9,7 @@ import { TagChip } from "@/components/ServerChips";
 import { RoleChip } from "@/components/ServerModerationTabs";
 import SwitchAccountsMenu from "@/components/SwitchAccountsMenu";
 import ProfileAvatar from "@/components/ProfileAvatar";
+import NebulaBackdrop from "@/components/NebulaBackdrop";
 import { useToast } from "@/context/ToastContext";
 import { fetchProfile, type PublicProfile } from "@/lib/profileRealtime";
 import {
@@ -152,12 +153,13 @@ export default function FriendProfileModal({
         onClick={onClose}
         className="fixed inset-0 z-[95] flex items-center justify-center bg-black/70 px-4"
       >
-        <motion.div
+        <div className="relative w-full max-w-xs" onClick={(e) => e.stopPropagation()}>
+          {profile?.banner === "banner-nebula" && <NebulaBackdrop />}
+          <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
-          onClick={(e) => e.stopPropagation()}
-          className="panel relative w-full max-w-xs overflow-hidden !p-0 text-center"
+          className="panel relative w-full overflow-hidden !p-0 text-center"
           style={
             profile?.accentColor
               ? { borderColor: profile.accentColor, boxShadow: `0 0 24px -6px ${profile.accentColor}` }
@@ -398,7 +400,8 @@ export default function FriendProfileModal({
               </button>
             </div>
           </div>
-        </motion.div>
+          </motion.div>
+        </div>
       </motion.div>
     </AnimatePresence>
   );
