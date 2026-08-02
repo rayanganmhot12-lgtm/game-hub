@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Bell, Trash2, Gift, Sparkles, UserPlus, Users2, AlertTriangle, Megaphone, UserCheck, MessageSquare, AtSign } from "lucide-react";
+import { Bell, Trash2, Gift, Sparkles, UserPlus, Users2, AlertTriangle, Megaphone, UserCheck, MessageSquare, AtSign, MinusCircle, PackageOpen } from "lucide-react";
 
 interface Notification {
   id: string;
@@ -19,7 +19,9 @@ const TYPE_ICONS: Record<string, React.ComponentType<{ size?: number; className?
   group_message: MessageSquare,
   group_mention: AtSign,
   points_gift: Gift,
+  points_withdrawal: MinusCircle,
   cosmetic_gift: Sparkles,
+  cosmetic_revoke: PackageOpen,
   warning: AlertTriangle,
   announcement: Megaphone,
 };

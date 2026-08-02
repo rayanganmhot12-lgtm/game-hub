@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Lock } from "lucide-react";
 import { useToast } from "@/context/ToastContext";
-import { priceFor, type CosmeticItem } from "@/lib/cosmetics";
+import { priceFor, PLUS_ITEM_ID, type CosmeticItem } from "@/lib/cosmetics";
 import { CosmeticFrame, CosmeticBadge, CosmeticBanner } from "@/components/CosmeticFrame";
 
 export default function StoreGrid({
@@ -86,7 +86,7 @@ export default function StoreGrid({
     return <CosmeticBadge badgeId={item.id} />;
   }
 
-  const hasPlus = unlockedCosmetics.includes("plus");
+  const hasPlus = unlockedCosmetics.includes(PLUS_ITEM_ID);
   const itemsForType = catalog.filter((c) => c.type === type);
 
   return (

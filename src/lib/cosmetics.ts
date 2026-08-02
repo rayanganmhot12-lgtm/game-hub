@@ -101,7 +101,7 @@ export const COSMETIC_CATALOG: CosmeticItem[] = [
     type: "membership",
     name: "Game Hub Plus",
     description: "Animated GIF avatar/banner, a custom profile color, and 15% off everything else here.",
-    cost: 1000,
+    cost: 5000,
   },
 ];
 
