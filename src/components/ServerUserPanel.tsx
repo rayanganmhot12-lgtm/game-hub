@@ -18,6 +18,8 @@ export default function ServerUserPanel({
   equippedFrame,
   equippedBadge,
   nameEffect,
+  nameEffectColor1,
+  nameEffectColor2,
 }: {
   myCode: string;
   myDisplayName: string;
@@ -25,9 +27,16 @@ export default function ServerUserPanel({
   equippedFrame?: string | null;
   equippedBadge?: string | null;
   nameEffect?: string | null;
+  nameEffectColor1?: string | null;
+  nameEffectColor2?: string | null;
 }) {
   const { muted, deafened, toggleMuted, toggleDeafen } = useGroupCall();
   const [showProfile, setShowProfile] = useState(false);
+  const nameIsGradient = nameEffect === "gradient-cycle";
+  const nameGradientStyle =
+    nameIsGradient && nameEffectColor1 && nameEffectColor2
+      ? ({ "--name-color-1": nameEffectColor1, "--name-color-2": nameEffectColor2 } as React.CSSProperties)
+      : undefined;
 
   return (
     <div className="flex items-center gap-1 border-t border-border/60 bg-surface-2/40 px-2 py-2">
@@ -48,9 +57,8 @@ export default function ServerUserPanel({
         </CosmeticFrame>
         <div className="min-w-0">
           <p
-            className={`truncate text-xs font-medium ${
-              nameEffect === "gradient-cycle" ? "name-gradient-cycle" : "text-foreground"
-            }`}
+            className={`truncate text-xs font-medium ${nameIsGradient ? "name-gradient-cycle" : "text-foreground"}`}
+            style={nameGradientStyle}
           >
             {myDisplayName}
           </p>

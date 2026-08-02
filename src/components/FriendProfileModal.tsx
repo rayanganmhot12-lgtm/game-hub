@@ -211,6 +211,14 @@ export default function FriendProfileModal({
                 className={`text-lg font-bold ${
                   profile?.nameEffect === "gradient-cycle" ? "name-gradient-cycle" : "text-foreground"
                 }`}
+                style={
+                  profile?.nameEffect === "gradient-cycle" && profile?.nameEffectColor1 && profile?.nameEffectColor2
+                    ? ({
+                        "--name-color-1": profile.nameEffectColor1,
+                        "--name-color-2": profile.nameEffectColor2,
+                      } as React.CSSProperties)
+                    : undefined
+                }
               >
                 {displayName}
               </h2>

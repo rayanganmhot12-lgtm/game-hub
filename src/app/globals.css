@@ -300,7 +300,12 @@ body {
   color: #c2185b;
 }
 .name-gradient-cycle {
-  background: linear-gradient(90deg, var(--accent-bright), #a855f7, var(--accent-bright));
+  background: linear-gradient(
+    90deg,
+    var(--name-color-1, #391fff),
+    var(--name-color-2, #a855f7),
+    var(--name-color-1, #391fff)
+  );
   background-size: 200% auto;
   background-clip: text;
   -webkit-background-clip: text;

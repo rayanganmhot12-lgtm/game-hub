@@ -55,8 +55,12 @@ model User {
   equippedBanner       String?
   // Self-only cosmetic, admin account only in practice: an animated
   // two-color gradient effect for the display name. "gradient-cycle" or
-  // unset — no other values, no color picker.
+  // unset — no other values.
   nameEffect           String?
+  // Hex colors for the nameEffect gradient — unset means the CSS default
+  // pair. Always set together (see the name-effect API route).
+  nameEffectColor1     String?
+  nameEffectColor2     String?
   // Plus-exclusive: a custom hex color for this user's profile card border
   // glow, shown to friends viewing their profile.
   accentColor          String?

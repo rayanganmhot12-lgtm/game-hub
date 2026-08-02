@@ -26,11 +26,15 @@ export default function ModerationTabs({
   initialActions,
   friends,
   initialNameEffect,
+  initialColor1,
+  initialColor2,
 }: {
   myDisplayName: string;
   initialActions: ModerationActionLog[];
   friends: Friend[];
   initialNameEffect: string | null;
+  initialColor1: string | null;
+  initialColor2: string | null;
 }) {
   const [tab, setTab] = useState<Tab>("actions");
 
@@ -58,7 +62,7 @@ export default function ModerationTabs({
       {tab === "actions" ? (
         <ModerationPanel myDisplayName={myDisplayName} initialActions={initialActions} friends={friends} />
       ) : (
-        <AdminPanel initialNameEffect={initialNameEffect} />
+        <AdminPanel initialNameEffect={initialNameEffect} initialColor1={initialColor1} initialColor2={initialColor2} />
       )}
     </div>
   );

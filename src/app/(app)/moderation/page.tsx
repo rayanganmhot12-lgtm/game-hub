@@ -32,6 +32,8 @@ export default async function ModerationPage() {
         initialActions={actions}
         friends={friends}
         initialNameEffect={user.nameEffect}
+        initialColor1={user.nameEffectColor1}
+        initialColor2={user.nameEffectColor2}
       />
     </div>
   );

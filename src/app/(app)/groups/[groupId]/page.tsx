@@ -50,6 +50,8 @@ export default async function GroupChatPage({ params }: { params: Promise<{ grou
         myDisplayName={myDisplayName}
         myBadge={user!.equippedBadge}
         myNameEffect={user!.nameEffect}
+        myNameEffectColor1={user!.nameEffectColor1}
+        myNameEffectColor2={user!.nameEffectColor2}
         myAvatarDataUrl={user!.avatarDataUrl}
         myEquippedFrame={user!.equippedFrame}
         initialMembers={group.members}

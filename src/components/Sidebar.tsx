@@ -26,6 +26,8 @@ export default function Sidebar({
   equippedFrame,
   equippedBadge,
   nameEffect,
+  nameEffectColor1,
+  nameEffectColor2,
 }: {
   isAdmin: boolean;
   displayName: string;
@@ -34,6 +36,8 @@ export default function Sidebar({
   equippedFrame: string | null;
   equippedBadge: string | null;
   nameEffect: string | null;
+  nameEffectColor1: string | null;
+  nameEffectColor2: string | null;
 }) {
   const pathname = usePathname();
   const links = isAdmin
@@ -78,6 +82,8 @@ export default function Sidebar({
           equippedFrame={equippedFrame}
           equippedBadge={equippedBadge}
           nameEffect={nameEffect}
+          nameEffectColor1={nameEffectColor1}
+          nameEffectColor2={nameEffectColor2}
         />
       </div>
     </aside>

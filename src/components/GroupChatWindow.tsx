@@ -242,6 +242,8 @@ export default function GroupChatWindow({
   myDisplayName,
   myBadge,
   myNameEffect,
+  myNameEffectColor1,
+  myNameEffectColor2,
   myAvatarDataUrl,
   myEquippedFrame,
   initialMembers,
@@ -253,6 +255,8 @@ export default function GroupChatWindow({
   myDisplayName: string;
   myBadge?: string | null;
   myNameEffect?: string | null;
+  myNameEffectColor1?: string | null;
+  myNameEffectColor2?: string | null;
   myAvatarDataUrl?: string | null;
   myEquippedFrame?: string | null;
   initialMembers: GroupMember[];
@@ -699,6 +703,8 @@ export default function GroupChatWindow({
         myDisplayName={myDisplayName}
         myBadge={myBadge}
         myNameEffect={myNameEffect}
+        myNameEffectColor1={myNameEffectColor1}
+        myNameEffectColor2={myNameEffectColor2}
         myAvatarDataUrl={myAvatarDataUrl}
         myEquippedFrame={myEquippedFrame}
         members={allMembers}

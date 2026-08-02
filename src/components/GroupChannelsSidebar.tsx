@@ -120,6 +120,8 @@ export default function GroupChannelsSidebar({
   myDisplayName,
   myBadge,
   myNameEffect,
+  myNameEffectColor1,
+  myNameEffectColor2,
   myAvatarDataUrl,
   myEquippedFrame,
   members,
@@ -133,6 +135,8 @@ export default function GroupChannelsSidebar({
   myDisplayName: string;
   myBadge?: string | null;
   myNameEffect?: string | null;
+  myNameEffectColor1?: string | null;
+  myNameEffectColor2?: string | null;
   myAvatarDataUrl?: string | null;
   myEquippedFrame?: string | null;
   members: GroupMemberEntry[];
@@ -425,6 +429,8 @@ export default function GroupChannelsSidebar({
         equippedFrame={myEquippedFrame}
         equippedBadge={myBadge}
         nameEffect={myNameEffect}
+        nameEffectColor1={myNameEffectColor1}
+        nameEffectColor2={myNameEffectColor2}
       />
 
       {panel === "invite" && (

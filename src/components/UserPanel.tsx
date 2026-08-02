@@ -10,6 +10,8 @@ export default function UserPanel({
   equippedFrame,
   equippedBadge,
   nameEffect,
+  nameEffectColor1,
+  nameEffectColor2,
 }: {
   displayName: string;
   avatarDataUrl: string | null;
@@ -17,7 +19,14 @@ export default function UserPanel({
   equippedFrame: string | null;
   equippedBadge: string | null;
   nameEffect: string | null;
+  nameEffectColor1: string | null;
+  nameEffectColor2: string | null;
 }) {
+  const nameIsGradient = nameEffect === "gradient-cycle";
+  const nameGradientStyle =
+    nameIsGradient && nameEffectColor1 && nameEffectColor2
+      ? ({ "--name-color-1": nameEffectColor1, "--name-color-2": nameEffectColor2 } as React.CSSProperties)
+      : undefined;
   return (
     <div className="flex items-center gap-2.5 border-t border-border/60 bg-surface-2/40 px-3 py-3">
       <Link
@@ -43,9 +52,8 @@ export default function UserPanel({
         </CosmeticFrame>
         <div className="min-w-0">
           <p
-            className={`truncate text-base font-medium ${
-              nameEffect === "gradient-cycle" ? "name-gradient-cycle" : "text-foreground"
-            }`}
+            className={`truncate text-base font-medium ${nameIsGradient ? "name-gradient-cycle" : "text-foreground"}`}
+            style={nameGradientStyle}
           >
             {displayName}
           </p>

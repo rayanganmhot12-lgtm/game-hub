@@ -120,6 +120,14 @@ export default function GroupMembersList({
                 ? tagColorClassName(role.color)
                 : "text-foreground"
           }`}
+          style={
+            profile?.nameEffect === "gradient-cycle" && profile?.nameEffectColor1 && profile?.nameEffectColor2
+              ? ({
+                  "--name-color-1": profile.nameEffectColor1,
+                  "--name-color-2": profile.nameEffectColor2,
+                } as React.CSSProperties)
+              : undefined
+          }
         >
           {member.displayName}
         </span>

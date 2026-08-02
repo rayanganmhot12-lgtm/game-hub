@@ -26,6 +26,8 @@ export async function getCurrentUser() {
       accentColor: true,
       pinnedCosmeticId: true,
       nameEffect: true,
+      nameEffectColor1: true,
+      nameEffectColor2: true,
     },
   });
 }

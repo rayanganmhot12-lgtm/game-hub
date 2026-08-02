@@ -19,6 +19,10 @@ export interface PublicProfile {
   badge?: string | null;
   // "gradient-cycle" or unset — see the .name-gradient-cycle CSS class.
   nameEffect?: string | null;
+  // Hex colors for the nameEffect gradient — unset means the CSS class's
+  // own default pair.
+  nameEffectColor1?: string | null;
+  nameEffectColor2?: string | null;
   frame?: string | null;
   banner?: string | null;
   accentColor?: string | null;

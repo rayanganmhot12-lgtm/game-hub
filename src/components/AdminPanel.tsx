@@ -9,15 +9,25 @@ import { grantAdminBadge, revokeAdminBadge } from "@/lib/moderationRealtime";
 
 type GrantableBadge = "badge-developer" | "badge-admin";
 
+const DEFAULT_COLOR_1 = "#391fff";
+const DEFAULT_COLOR_2 = "#a855f7";
+
 export default function AdminPanel({
   initialNameEffect,
+  initialColor1,
+  initialColor2,
 }: {
   initialNameEffect: string | null;
+  initialColor1: string | null;
+  initialColor2: string | null;
 }) {
   const { showToast } = useToast();
   const router = useRouter();
   const [nameEffect, setNameEffect] = useState(initialNameEffect);
   const [saving, setSaving] = useState(false);
+  const [color1, setColor1] = useState(initialColor1 ?? DEFAULT_COLOR_1);
+  const [color2, setColor2] = useState(initialColor2 ?? DEFAULT_COLOR_2);
+  const [savingColors, setSavingColors] = useState(false);
   const [badgeCodeInput, setBadgeCodeInput] = useState("");
   const [badgeBusy, setBadgeBusy] = useState(false);
 
@@ -39,6 +49,24 @@ export default function AdminPanel({
       showToast(err instanceof Error ? err.message : "Couldn't update your name effect.", "error");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function saveColors() {
+    setSavingColors(true);
+    try {
+      const res = await fetch("/api/admin/name-effect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ color1, color2 }),
+      });
+      if (!res.ok) throw new Error("Couldn't save your colors.");
+      showToast("Gradient colors saved.", "success");
+      router.refresh();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Couldn't save your colors.", "error");
+    } finally {
+      setSavingColors(false);
     }
   }
 
@@ -93,9 +121,34 @@ export default function AdminPanel({
         <p className="mb-3 text-xs text-muted">
           Shows your display name with a moving two-color gradient, everywhere your name appears.
         </p>
-        <button onClick={toggleNameEffect} disabled={saving} className="btn-primary">
+        <button onClick={toggleNameEffect} disabled={saving} className="btn-primary mb-4">
           {nameEffect ? "Turn Off" : "Turn On"}
         </button>
+
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Gradient Colors</p>
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-2 text-xs text-muted">
+            <input
+              type="color"
+              value={color1}
+              onChange={(e) => setColor1(e.target.value)}
+              className="h-8 w-8 cursor-pointer rounded border border-border bg-transparent p-0.5"
+            />
+            Color 1
+          </label>
+          <label className="flex items-center gap-2 text-xs text-muted">
+            <input
+              type="color"
+              value={color2}
+              onChange={(e) => setColor2(e.target.value)}
+              className="h-8 w-8 cursor-pointer rounded border border-border bg-transparent p-0.5"
+            />
+            Color 2
+          </label>
+          <button onClick={saveColors} disabled={savingColors} className="btn-ghost !text-xs">
+            Save Colors
+          </button>
+        </div>
       </div>
 
       <div className="panel p-5">
