@@ -35,7 +35,7 @@ function ServerIcon({ server, active }: { server: Server; active: boolean }) {
     <Link
       href={`/groups/${server.groupId}`}
       title={server.name}
-      className={`relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full transition-all duration-200 ${
+      className={`relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full transition-all duration-200 hover:scale-110 ${
         active ? "rounded-2xl ring-2 ring-accent-bright" : "hover:rounded-2xl"
       }`}
     >
@@ -74,7 +74,7 @@ export default function ServerRail({
         <Link
           href="/friends"
           title="Community"
-          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-all duration-200 ${
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-all duration-200 hover:scale-110 ${
             onCommunity ? "rounded-2xl bg-accent text-black" : "bg-surface-2 text-foreground hover:rounded-2xl hover:bg-accent/20"
           }`}
         >
@@ -90,7 +90,7 @@ export default function ServerRail({
         <button
           onClick={() => setShowModal(true)}
           title="Add a Server"
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-surface-2 text-emerald-400 transition-all duration-200 hover:rounded-2xl hover:bg-emerald-400/20"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-surface-2 text-emerald-400 transition-all duration-200 hover:scale-110 hover:rounded-2xl hover:bg-emerald-400/20"
         >
           <Plus size={20} />
         </button>
