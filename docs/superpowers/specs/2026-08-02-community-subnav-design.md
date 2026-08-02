@@ -1,30 +1,31 @@
-# Community Sub-Navigation Design Spec
+# Friends Sub-Navigation Design Spec
 
 Date: 2026-08-02
 
 ## Goal
 
-Give the "Community" icon in `ServerRail` its own Discord-style second-column
-sub-navigation, exactly the way clicking a server icon already swaps the main
-`Sidebar` for that server's `GroupChannelsSidebar`. Three tabs: **Game Hub**
-(quick links to the app's existing Steam-related pages), **Friends** (today's
-existing friends/groups list, unchanged), and **Missions** (a new tab —
-placeholder only for now, real quests to be designed later).
+Give the "Friends" icon in `ServerRail` (currently labeled "Community" —
+renamed back to "Friends" as part of this change) its own Discord-style
+second-column sub-navigation, exactly the way clicking a server icon already
+swaps the main `Sidebar` for that server's `GroupChannelsSidebar`. Three
+tabs: **Game Hub** (quick links to the app's existing Steam-related pages),
+**Friends** (today's existing friends/groups list, unchanged), and
+**Missions** (a new tab — placeholder only for now, real quests to be
+designed later).
 
 ## Current State
 
-- `ServerRail.tsx` renders a static "Community" icon (`Users`, linking to
-  `/friends`) above the list of joined servers. `onCommunity` highlight is
-  `pathname === "/friends"`.
-- `Sidebar.tsx` renders the main app nav (Dashboard, Library, Achievements,
-  Community, Connections, Playlist, Store, Theme Editor, Recap, and
-  Moderation for admins). It already returns `null` when
+- `ServerRail.tsx` renders a static icon (`Users`, `title="Community"`,
+  linking to `/friends`) above the list of joined servers. `onCommunity`
+  highlight is `pathname === "/friends"`.
+- `Sidebar.tsx` renders the main app nav, including a `{ href: "/friends",
+  label: "Community", icon: Users }` entry. It already returns `null` when
   `pathname.startsWith("/groups/")`, since inside a server the
   `ServerRail` + `GroupChannelsSidebar` pairing takes over as navigation —
   the main nav would be redundant clutter there.
-- `/friends` (`src/app/(app)/friends/page.tsx`) renders a page header plus
-  `<FriendsHub>`, which already contains the full friends/groups list UI.
-  This component is not changing.
+- `/friends` (`src/app/(app)/friends/page.tsx`) renders a page header
+  ("Community") plus `<FriendsHub>`, which already contains the full
+  friends/groups list UI. `FriendsHub` itself is not changing.
 - Steam-related content is currently spread across four separate existing
   pages: `/dashboard`, `/library`, `/achievements`, `/connect`. No page
   currently aggregates or links between them as a set.
@@ -36,54 +37,65 @@ placeholder only for now, real quests to be designed later).
 - No automated test framework exists in this project (confirmed: no `test`
   script in `package.json`). Verification is manual.
 
+## 0. Naming: Community → Friends
+
+Every user-facing occurrence of "Community" reverts to "Friends":
+`ServerRail`'s icon `title`, `Sidebar`'s nav-item `label`, and the page
+heading (`<h1>`) on the friends page. This is independent of the "Friends"
+sub-tab introduced below — same pattern Discord itself uses (the icon and
+one of its own sub-items share a name).
+
 ## 1. Routing and Layout Swap
 
-New route group `src/app/(app)/community/` with a shared layout:
+Reuse the existing `/friends` route as the section root instead of adding a
+new `/community` prefix — this avoids a redirect and keeps today's URL
+working unchanged:
 
-- `src/app/(app)/community/layout.tsx` — renders `<CommunitySidebar />`
+- `src/app/(app)/friends/layout.tsx` — new. Renders `<FriendsSidebar />`
   beside `{children}` in a flex row (mirroring how `GroupChannelsSidebar`
   sits beside chat content today).
-- `src/app/(app)/community/game-hub/page.tsx` — new "Game Hub" tab content.
-- `src/app/(app)/community/friends/page.tsx` — moves today's `/friends`
-  page content here verbatim (same header + `<FriendsHub>`, same props).
-- `src/app/(app)/community/missions/page.tsx` — new "Missions" tab,
+- `src/app/(app)/friends/page.tsx` — unchanged content (page header text
+  becomes "Friends" per section 0; still renders `<FriendsHub>` with the
+  same props). This page IS the "Friends" tab — no separate route needed
+  for it.
+- `src/app/(app)/friends/game-hub/page.tsx` — new "Game Hub" tab content.
+- `src/app/(app)/friends/missions/page.tsx` — new "Missions" tab,
   placeholder only.
-- `src/app/(app)/friends/page.tsx` — replaced with a server-side
-  `redirect("/community/friends")`, so nothing that already links to
-  `/friends` breaks.
 
 `Sidebar.tsx`'s existing early-return gets one more condition:
 
 ```tsx
-if (pathname.startsWith("/groups/") || pathname.startsWith("/community")) return null;
+if (pathname.startsWith("/groups/") || pathname.startsWith("/friends")) return null;
 ```
 
-`ServerRail.tsx` changes: the Community link's `href` becomes
-`/community/friends` (so it lands on a real default tab, not a bare
-`/community` with nothing to render), and `onCommunity` becomes
-`pathname.startsWith("/community")`.
+`ServerRail.tsx` changes: `title` becomes `"Friends"` (href stays
+`/friends`, unchanged), and `onCommunity` becomes
+`pathname.startsWith("/friends")` (so it stays highlighted across all three
+sub-tabs, not just the exact index route).
 
-## 2. CommunitySidebar Component
+## 2. FriendsSidebar Component
 
-New `src/components/CommunitySidebar.tsx`, visually consistent with the main
+New `src/components/FriendsSidebar.tsx`, visually consistent with the main
 `Sidebar.tsx` (same `w-72`, `border-r`, `bg-surface/40 backdrop-blur-xl`,
 same active-pill pattern using `motion.div layoutId` for the sliding
 highlight) but with a fixed, non-dynamic list of exactly three links:
 
 ```tsx
 const tabs = [
-  { href: "/community/game-hub", label: "Game Hub", icon: LayoutDashboard },
-  { href: "/community/friends", label: "Friends", icon: Users },
-  { href: "/community/missions", label: "Missions", icon: Trophy },
+  { href: "/friends/game-hub", label: "Game Hub", icon: LayoutDashboard },
+  { href: "/friends", label: "Friends", icon: Users },
+  { href: "/friends/missions", label: "Missions", icon: Trophy },
 ];
 ```
 
-Active state: `pathname === href`. No props needed beyond what `usePathname`
-already gives it — no server data, no per-user variation.
+Active state: `pathname === href` (this makes the "Friends" tab active only
+on the exact `/friends` route, not on `/friends/game-hub` — an exact match
+check is required precisely because `/friends` is a string-prefix of the
+other two routes too).
 
 ## 3. Game Hub Tab
 
-`src/app/(app)/community/game-hub/page.tsx` — a page header ("Game Hub" /
+`src/app/(app)/friends/game-hub/page.tsx` — a page header ("Game Hub" /
 short description) plus a responsive grid of four link-cards, one per
 existing page, reusing the app's existing card/panel visual style (same
 treatment as `StatCard`/dashboard cards):
@@ -97,21 +109,21 @@ treatment as `StatCard`/dashboard cards):
 
 Each card is just a styled `<Link>` — no data fetching, no duplicated logic
 from the destination pages. Clicking a card navigates to that existing page
-in the main content area; the `CommunitySidebar` and its "Game Hub" tab stay
-highlighted only while the user is actually on `/community/game-hub` itself
-(navigating away to `/dashboard` naturally restores the normal `Sidebar`,
-per the routing rule in section 1).
+in the main content area; the `FriendsSidebar` and its tabs stay visible
+only while the user is actually on a `/friends*` route (navigating away to
+`/dashboard` naturally restores the normal `Sidebar`, per the routing rule
+in section 1).
 
 ## 4. Friends Tab
 
-`src/app/(app)/community/friends/page.tsx` — byte-for-byte the same content
-that `src/app/(app)/friends/page.tsx` has today (fetch `friends`/`groups`,
-render `<FriendsHub>` with the same props). Purely a file move plus the
-redirect described in section 1. No behavior change.
+No new file beyond the renamed heading text (section 0) — `/friends/page.tsx`
+keeps fetching `friends`/`groups` and rendering `<FriendsHub>` exactly as
+today. It is now nested under the new `friends/layout.tsx`, so it gains the
+`FriendsSidebar` alongside it, but its own content and props are unchanged.
 
 ## 5. Missions Tab
 
-`src/app/(app)/community/missions/page.tsx` — placeholder only, per explicit
+`src/app/(app)/friends/missions/page.tsx` — placeholder only, per explicit
 scope decision: build the tab/route now, design actual missions later as a
 separate feature. Simple centered empty-state: an icon (`Trophy` or
 `Sparkles`), a heading ("Missions"), and one line of body text ("Quests and
@@ -129,17 +141,19 @@ changes, no new API routes, no interaction with `User.points` in this pass.
 
 Manual verification only (no automated test framework in this project):
 
-- Click the Community icon from any page → lands on `/community/friends`,
-  main `Sidebar` disappears, `CommunitySidebar` appears with "Friends"
-  highlighted, friends/groups list renders identically to before.
+- Click the Friends icon from any page → lands on `/friends`, main
+  `Sidebar` disappears, `FriendsSidebar` appears with "Friends" highlighted,
+  friends/groups list renders identically to before.
 - Click "Game Hub" tab → four cards render; each navigates to its target
   page, and the main `Sidebar` correctly reappears once there (since those
-  routes don't start with `/community`).
+  routes don't start with `/friends`).
 - Click "Missions" tab → placeholder renders, no console errors.
-- Visit the old `/friends` URL directly → redirects to `/community/friends`.
-- Confirm `ServerRail`'s Community icon still highlights correctly while on
-  any `/community/*` route, and that clicking a server icon still swaps to
-  that server's own channel sidebar as before (no regression).
+- Confirm `ServerRail`'s icon tooltip now reads "Friends" and still
+  highlights correctly while on any `/friends*` route, and that clicking a
+  server icon still swaps to that server's own channel sidebar as before
+  (no regression).
+- Confirm the main `Sidebar`'s own nav entry now reads "Friends" instead of
+  "Community" wherever the main `Sidebar` is visible.
 
 ## Out of Scope
 
