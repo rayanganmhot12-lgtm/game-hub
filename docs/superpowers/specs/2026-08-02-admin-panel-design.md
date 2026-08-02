@@ -125,10 +125,16 @@ contains the two features below, stacked vertically.
 - Admin tab UI: a friend-code input (matching the existing Actions tab's
   input styling), and for each of the two badges a pair of buttons ("Grant"
   / "Revoke") that call the new helpers directly (client-side Firebase
-  writes, admin-gated by the fact only the admin account ever sees this
-  tab — the write itself has no separate server-side check, matching how
-  e.g. `setModerationState` is called directly from `ModerationPanel`
-  today without an intermediate API route).
+  writes). This app has no Firebase Auth or security rules at all — every
+  RTDB path is already unauthenticated public-config access, so this is a
+  UX-level gate (only the admin account's UI exposes the button), not a
+  hard server-side authorization boundary: the exported grant/revoke
+  functions could technically be called by anyone who found them, same as
+  `setModerationState`'s ban/mute writes already can be today. Real
+  enforcement would require Firebase security rules, a project-wide gap
+  this feature doesn't introduce and isn't the place to fix. Impact is
+  limited to cosmetic impersonation — nothing in the app keys any
+  permission off a badge id.
 
 ## Error Handling
 
