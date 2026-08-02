@@ -319,8 +319,7 @@ body {
 }
 
 .banner-shimmer::after,
-.banner-aurora::after,
-.banner-neon-glow::after {
+.banner-aurora::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -337,13 +336,19 @@ body {
   mix-blend-mode: overlay;
   animation: banner-aurora-shift 6s ease-in-out infinite;
 }
+/* Glow lives on the border only — the banner's own image/gradient content
+   underneath is left untouched, unlike the full-area overlays above. */
 .banner-neon-glow {
-  box-shadow: inset 0 0 26px 4px rgba(56, 189, 248, 0.5);
-}
-.banner-neon-glow::after {
-  background: linear-gradient(100deg, rgba(56, 189, 248, 0.55) 0%, rgba(168, 85, 247, 0.5) 50%, rgba(56, 189, 248, 0.55) 100%);
-  background-size: 200% 100%;
-  mix-blend-mode: screen;
+  border: 3px solid transparent;
+  background-image:
+    linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0)),
+    linear-gradient(120deg, #38bdf8, #22d3ee, #a855f7, #38bdf8);
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  background-size:
+    auto,
+    250% 250%;
+  box-shadow: inset 0 0 10px 0 rgba(56, 189, 248, 0.35);
   animation: banner-neon-glow-shift 5s ease-in-out infinite;
 }
 @keyframes banner-shimmer-sweep {
@@ -366,10 +371,10 @@ body {
 @keyframes banner-neon-glow-shift {
   0%,
   100% {
-    background-position: 0% 50%;
+    background-position: 0 0, 0% 50%;
   }
   50% {
-    background-position: 100% 50%;
+    background-position: 0 0, 100% 50%;
   }
 }
 
@@ -378,7 +383,7 @@ body {
   .frame-neon-pulse,
   .banner-shimmer::after,
   .banner-aurora::after,
-  .banner-neon-glow::after,
+  .banner-neon-glow,
   .name-gradient-cycle {
     animation: none;
   }
