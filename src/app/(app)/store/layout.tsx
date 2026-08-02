@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { getCurrentUser, getDisplayName } from "@/lib/auth";
 import { getOrCreateFriendCode } from "@/lib/friendCodeServer";
 import { isAdminEmail } from "@/lib/admin";
@@ -8,12 +9,18 @@ import StoreProfilePreview from "@/components/StoreProfilePreview";
 
 export default async function StoreLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
-  const isDev = isAdminEmail(user!.email);
+  // Layouts render in parallel with the page, so the app-level layout's own
+  // redirect can't be relied on to run first — without this guard a stale or
+  // expired session dereferences null here and the whole route 500s.
+  if (!user) {
+    redirect("/");
+  }
+  const isDev = isAdminEmail(user.email);
   const priced = getPricedCatalog();
   const catalog = isDev ? priced : priced.filter((c) => !c.adminOnly);
-  const unlockedCosmetics: string[] = user!.unlockedCosmetics ? JSON.parse(user!.unlockedCosmetics) : [];
-  const myFriendCode = await getOrCreateFriendCode(user!.id);
-  const myDisplayName = getDisplayName(user!);
+  const unlockedCosmetics: string[] = user.unlockedCosmetics ? JSON.parse(user.unlockedCosmetics) : [];
+  const myFriendCode = await getOrCreateFriendCode(user.id);
+  const myDisplayName = getDisplayName(user);
 
   return (
     <div className="flex flex-col gap-4 md:flex-row md:gap-6">
