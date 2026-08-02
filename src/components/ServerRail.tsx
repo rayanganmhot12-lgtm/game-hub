@@ -66,7 +66,7 @@ export default function ServerRail({
 }) {
   const pathname = usePathname();
   const [showModal, setShowModal] = useState(false);
-  const onCommunity = pathname.startsWith("/friends");
+  const onFriends = pathname.startsWith("/friends");
 
   return (
     <>
@@ -75,7 +75,7 @@ export default function ServerRail({
           href="/friends"
           title="Friends"
           className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-all duration-200 hover:scale-110 ${
-            onCommunity ? "rounded-2xl bg-accent text-black" : "bg-surface-2 text-foreground hover:rounded-2xl hover:bg-accent/20"
+            onFriends ? "rounded-2xl bg-accent text-black" : "bg-surface-2 text-foreground hover:rounded-2xl hover:bg-accent/20"
           }`}
         >
           <Users size={20} />
