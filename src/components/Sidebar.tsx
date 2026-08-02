@@ -3,14 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { LayoutDashboard, Library, Trophy, Plug, Palette, Sparkles, Users } from "lucide-react";
+import { LayoutDashboard, Library, Trophy, Plug, Palette, Sparkles } from "lucide-react";
 import UserPanel from "@/components/UserPanel";
 
 const links = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/library", label: "Library", icon: Library },
   { href: "/achievements", label: "Achievements", icon: Trophy },
-  { href: "/friends", label: "Friends", icon: Users },
   { href: "/connect", label: "Connections", icon: Plug },
   { href: "/theme-editor", label: "Theme Editor", icon: Palette },
   { href: "/recap", label: "Recap", icon: Sparkles },
@@ -39,7 +38,7 @@ export default function Sidebar({
 
   // Inside a server, the server rail + channel sidebar take over as
   // navigation — the main app nav would just be redundant clutter.
-  if (pathname.startsWith("/groups/") || pathname.startsWith("/friends")) return null;
+  if (pathname.startsWith("/groups/") || pathname.startsWith("/friends") || pathname.startsWith("/store")) return null;
 
   return (
     <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-72 shrink-0 flex-col border-r border-border/60 bg-surface/40 backdrop-blur-xl md:flex">

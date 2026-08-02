@@ -20,17 +20,11 @@ export default async function StorePage() {
     : [];
   const myCode = isDev ? await getOrCreateFriendCode(user!.id) : "";
   const myDisplayName = isDev ? getDisplayName(user!) : "";
+  const catalog = isDev ? COSMETIC_CATALOG : COSMETIC_CATALOG.filter((c) => !c.adminOnly);
+  const unlockedCosmetics: string[] = user!.unlockedCosmetics ? JSON.parse(user!.unlockedCosmetics) : [];
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Store</h1>
-        <p className="text-sm text-muted">
-          Cosmetic profile flair, unlocked with points earned from actually using Game Hub — playing games,
-          unlocking achievements, and syncing. No real money involved.
-        </p>
-      </div>
-
       {isDev && (
         <CollapsibleSection
           title="Developer Tools"
@@ -51,9 +45,10 @@ export default async function StorePage() {
       )}
 
       <StoreGrid
-        catalog={isDev ? COSMETIC_CATALOG : COSMETIC_CATALOG.filter((c) => !c.adminOnly)}
+        type="frame"
+        catalog={catalog}
         points={user!.points}
-        unlockedCosmetics={user!.unlockedCosmetics ? JSON.parse(user!.unlockedCosmetics) : []}
+        unlockedCosmetics={unlockedCosmetics}
         equippedFrame={user!.equippedFrame}
         equippedBadge={user!.equippedBadge}
         equippedBanner={user!.equippedBanner}
