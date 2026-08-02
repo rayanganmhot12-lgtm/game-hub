@@ -35,6 +35,7 @@ const BANNER_CLASSES: Record<string, string> = {
   "banner-shimmer": "banner-shimmer",
   "banner-aurora": "banner-aurora",
   "banner-neon-glow": "banner-neon-glow",
+  "banner-nebula": "banner-nebula",
 };
 
 export function CosmeticBanner({ bannerId, children }: { bannerId?: string | null; children: ReactNode }) {

@@ -319,7 +319,8 @@ body {
 }
 
 .banner-shimmer::after,
-.banner-aurora::after {
+.banner-aurora::after,
+.banner-nebula::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -351,6 +352,27 @@ body {
   box-shadow: inset 0 0 10px 0 rgba(56, 189, 248, 0.35);
   animation: banner-neon-glow-shift 5s ease-in-out infinite;
 }
+/* A small pink ringed planet + moon + soft nebula haze + a scatter of stars —
+   opaque enough that it reads as its own scene rather than a color wash. */
+.banner-nebula {
+  background-color: #0c0d16;
+}
+.banner-nebula::after {
+  background:
+    radial-gradient(circle at 14% 28%, #fff 0%, transparent 1.4%),
+    radial-gradient(circle at 33% 12%, #fff 0%, transparent 1.1%),
+    radial-gradient(circle at 52% 32%, #fff 0%, transparent 0.9%),
+    radial-gradient(circle at 78% 18%, #fff 0%, transparent 1.1%),
+    radial-gradient(circle at 91% 42%, #fff 0%, transparent 1.4%),
+    radial-gradient(circle at 22% 58%, #fff 0%, transparent 0.9%),
+    radial-gradient(circle at 8% 75%, #fff 0%, transparent 1.1%),
+    radial-gradient(ellipse 95px 32px at 68% 62%, rgba(255, 255, 255, 0.3) 55%, transparent 70%),
+    radial-gradient(circle at 68% 62%, #fbcfe8 0%, #f472b6 42%, #be185d 68%, transparent 78%),
+    radial-gradient(circle at 90% 32%, #fbcfe8 0%, #f472b6 55%, transparent 75%),
+    radial-gradient(ellipse 240px 150px at 42% 72%, rgba(244, 114, 182, 0.35), transparent 70%);
+  background-size: 200% 200%;
+  animation: banner-nebula-drift 16s ease-in-out infinite;
+}
 @keyframes banner-shimmer-sweep {
   0% {
     background-position: 150% 0;
@@ -377,6 +399,15 @@ body {
     background-position: 0 0, 100% 50%;
   }
 }
+@keyframes banner-nebula-drift {
+  0%,
+  100% {
+    background-position: 0% 0%;
+  }
+  50% {
+    background-position: 8% 6%;
+  }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .frame-gold,
@@ -384,6 +415,7 @@ body {
   .banner-shimmer::after,
   .banner-aurora::after,
   .banner-neon-glow,
+  .banner-nebula::after,
   .name-gradient-cycle {
     animation: none;
   }

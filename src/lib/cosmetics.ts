@@ -90,6 +90,13 @@ export const COSMETIC_CATALOG: CosmeticItem[] = [
     cost: 600,
   },
   {
+    id: "banner-nebula",
+    type: "banner",
+    name: "Nebula Banner",
+    description: "A pink ringed planet drifting through soft nebula clouds on your profile banner.",
+    cost: 900,
+  },
+  {
     id: PLUS_ITEM_ID,
     type: "membership",
     name: "Game Hub Plus",
