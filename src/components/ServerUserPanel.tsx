@@ -17,12 +17,14 @@ export default function ServerUserPanel({
   avatarDataUrl,
   equippedFrame,
   equippedBadge,
+  nameEffect,
 }: {
   myCode: string;
   myDisplayName: string;
   avatarDataUrl?: string | null;
   equippedFrame?: string | null;
   equippedBadge?: string | null;
+  nameEffect?: string | null;
 }) {
   const { muted, deafened, toggleMuted, toggleDeafen } = useGroupCall();
   const [showProfile, setShowProfile] = useState(false);
@@ -45,7 +47,13 @@ export default function ServerUserPanel({
           )}
         </CosmeticFrame>
         <div className="min-w-0">
-          <p className="truncate text-xs font-medium text-foreground">{myDisplayName}</p>
+          <p
+            className={`truncate text-xs font-medium ${
+              nameEffect === "gradient-cycle" ? "name-gradient-cycle" : "text-foreground"
+            }`}
+          >
+            {myDisplayName}
+          </p>
           <p className="truncate text-[10px] text-muted">{formatFriendCode(myCode)}</p>
         </div>
       </button>
