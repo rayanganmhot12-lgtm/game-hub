@@ -59,6 +59,32 @@ export function resetModerationState(code: string) {
   return set(ref(db, `moderation/${code}`), { banned: false, muted: false, timeoutUntil: null });
 }
 
+export type AdminBadgeGrants = Record<string, boolean>;
+
+// Admin-granted badges live at their own path, never inside profiles/{code}
+// — ProfilePublisher re-publishes that node's `badge` field from the
+// target's own equippedBadge every time any of their own profile fields
+// change, which would silently clobber an override stored there. This
+// path is never touched by the target's own client.
+export function grantAdminBadge(code: string, badgeId: string) {
+  const db = getFirebaseDb();
+  if (!db) return Promise.reject(new Error("Chat isn't set up yet."));
+  return update(ref(db, `adminBadges/${code}`), { [badgeId]: true });
+}
+
+export function revokeAdminBadge(code: string, badgeId: string) {
+  const db = getFirebaseDb();
+  if (!db) return Promise.reject(new Error("Chat isn't set up yet."));
+  return remove(ref(db, `adminBadges/${code}/${badgeId}`));
+}
+
+export async function getAdminBadges(code: string): Promise<AdminBadgeGrants> {
+  const db = getFirebaseDb();
+  if (!db) return {};
+  const snap = await get(ref(db, `adminBadges/${code}`));
+  return snap.val() ?? {};
+}
+
 export function sendWarning(targetCode: string, message: string, fromDisplayName: string) {
   const db = getFirebaseDb();
   if (!db) return Promise.reject(new Error("Chat isn't set up yet."));

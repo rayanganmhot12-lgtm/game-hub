@@ -291,6 +291,10 @@ body {
   background: linear-gradient(135deg, #818cf8, #6366f1);
   color: #f5f3ff;
 }
+.badge-admin {
+  background: linear-gradient(135deg, #fb7185, #e11d48);
+  color: #fff1f2;
+}
 .badge-hellokitty {
   background: linear-gradient(135deg, #ffe0ec, #ff9ec7);
   color: #c2185b;

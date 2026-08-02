@@ -56,6 +56,14 @@ export function publishActiveTag(myCode: string, tag: PublicProfileTag | null) {
 export async function fetchProfile(code: string): Promise<PublicProfile | null> {
   const db = getFirebaseDb();
   if (!db) return null;
-  const snapshot = await get(ref(db, `profiles/${code}`));
-  return snapshot.val();
+  const [profileSnap, adminBadgesSnap] = await Promise.all([
+    get(ref(db, `profiles/${code}`)),
+    get(ref(db, `adminBadges/${code}`)),
+  ]);
+  const profile: PublicProfile | null = profileSnap.val();
+  if (!profile) return null;
+  const adminBadges: Record<string, boolean> = adminBadgesSnap.val() ?? {};
+  if (adminBadges["badge-admin"]) return { ...profile, badge: "badge-admin" };
+  if (adminBadges["badge-developer"]) return { ...profile, badge: "badge-developer" };
+  return profile;
 }

@@ -18,6 +18,7 @@ const BADGE_LABELS: Record<string, { label: string; className: string }> = {
   // Reserved — not purchasable in the Store, only ever granted automatically
   // to the developer account (see src/lib/devBadge.ts).
   "badge-developer": { label: "DEV", className: "badge-developer" },
+  "badge-admin": { label: "ADMIN", className: "badge-admin" },
 };
 
 export function CosmeticBadge({ badgeId }: { badgeId?: string | null }) {

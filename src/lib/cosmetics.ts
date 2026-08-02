@@ -61,6 +61,14 @@ export const COSMETIC_CATALOG: CosmeticItem[] = [
     adminOnly: true,
   },
   {
+    id: "badge-admin",
+    type: "badge",
+    name: '"Admin" Badge',
+    description: "Granted by the developer account only.",
+    cost: 0,
+    adminOnly: true,
+  },
+  {
     id: "banner-shimmer",
     type: "banner",
     name: "Shimmer Banner",
