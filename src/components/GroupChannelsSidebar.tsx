@@ -65,6 +65,7 @@ import { listenForGroupCallParticipants } from "@/lib/groupCallRealtime";
 import { useCall } from "@/context/CallContext";
 import ServerUserPanel from "@/components/ServerUserPanel";
 import ProfileAvatar from "@/components/ProfileAvatar";
+import CallMemberMenu, { type CallMemberMenuTarget } from "@/components/CallMemberMenu";
 import {
   BANNER_SWATCHES,
   bannerClassName,
@@ -158,6 +159,7 @@ export default function GroupChannelsSidebar({
   const [voicePeers, setVoicePeers] = useState<
     Array<{ code: string; displayName: string; muted?: boolean; deafened?: boolean }>
   >([]);
+  const [voiceMenu, setVoiceMenu] = useState<CallMemberMenuTarget | null>(null);
   const [liveName, setLiveName] = useState(groupName);
   const [icon, setIcon] = useState<string | null>(null);
   const [profile, setProfile] = useState<GroupProfile>({});
@@ -364,6 +366,15 @@ export default function GroupChannelsSidebar({
               {voicePeers.map((peer) => (
                 <div
                   key={peer.code}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    setVoiceMenu({
+                      code: peer.code,
+                      displayName: peer.displayName,
+                      x: e.clientX,
+                      y: e.clientY,
+                    });
+                  }}
                   className="flex items-center gap-2 rounded-lg px-1.5 py-1 text-xs text-muted transition-colors hover:bg-surface-2/40"
                 >
                   <span className="relative shrink-0">
@@ -552,6 +563,8 @@ export default function GroupChannelsSidebar({
       {panel === "delete" && (
         <DeleteServerModal groupId={groupId} groupName={liveName} onClose={() => setPanel(null)} />
       )}
+
+      {voiceMenu && <CallMemberMenu target={voiceMenu} onClose={() => setVoiceMenu(null)} />}
     </div>
   );
 }

@@ -22,6 +22,7 @@ import { useToast } from "@/context/ToastContext";
 import { useDraggable } from "@/hooks/useDraggable";
 import { useFullscreen } from "@/hooks/useFullscreen";
 import ProfileAvatar from "@/components/ProfileAvatar";
+import CallMemberMenu, { type CallMemberMenuTarget } from "@/components/CallMemberMenu";
 
 const POSITION_STORAGE_KEY = "gamehub-call-window-position";
 
@@ -36,17 +37,6 @@ interface Tile {
   // implies a muted mic, and "cannot hear you" is the more useful fact.
   micMuted?: boolean;
   deafened?: boolean;
-  // must never play back your own mic (instant self-echo the moment your
-  // camera is on); group peer tiles must stay muted too, since
-  // GroupCallContext already renders its own per-peer <audio> element for
-  // every peer independent of video state, and a peer's video/audio tracks
-  // share the same MediaStream, so an unmuted video tile would double up
-  // that same audio; the 1:1 direct peer tile must NOT be muted, since
-  // CallContext no longer renders any <audio> element of its own (removed
-  // in Task 3 specifically so this video tile would be the sole playback
-  // sink) — muting it here would go silent whenever that peer's camera is
-  // off, a regression versus the old audio-only call experience.
-  muted: boolean;
 }
 
 // Whether a tile should show live video is NOT the same question as
@@ -94,16 +84,24 @@ function useTrackLive(stream: MediaStream | null): boolean {
   return live;
 }
 
-function VideoTile({ tile }: { tile: Tile }) {
+function VideoTile({ tile, onContextMenu }: { tile: Tile; onContextMenu?: (e: React.MouseEvent) => void }) {
   const live = useTrackLive(tile.stream);
 
   return (
-    <div className="relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-lg bg-surface-2">
+    <div
+      onContextMenu={onContextMenu}
+      className="relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-lg bg-surface-2"
+    >
+      {/* Always muted. Every peer's audio now goes through a PeerAudioSink
+          mounted by the call context for the whole call — group and 1:1 alike
+          — because per-person volume has to apply whether or not their camera
+          happens to be on. An unmuted tile would double that sink's output,
+          since a peer's audio and video arrive on one shared MediaStream. */}
       {live && tile.stream ? (
         <video
           autoPlay
           playsInline
-          muted={tile.muted}
+          muted
           ref={(el) => {
             if (el && el.srcObject !== tile.stream) el.srcObject = tile.stream;
           }}
@@ -111,29 +109,6 @@ function VideoTile({ tile }: { tile: Tile }) {
         />
       ) : (
         <ProfileAvatar code={tile.code} displayName={tile.displayName} size={56} />
-      )}
-      {/* Audio playback must not depend on the video-vs-avatar branch above:
-          for a tile that should carry its own audio (tile.muted === false —
-          only the 1:1 direct peer tile; local/group tiles are always
-          muted: true), the <video> element only exists while `live` is true,
-          so whenever the camera is off (the default/majority state for any
-          call) there'd be no audio path at all. This separate, always-
-          available sink covers that gap. It only renders while `!live`
-          specifically to avoid playing the same audio twice: once `live` is
-          true the <video> above is already mounted with muted={false} and
-          playing this exact stream's audio track — 1:1 calls put both audio
-          and video on one shared MediaStream (see videoCall.ts's
-          addVideoTrackAndRenegotiate, which adds the camera track to the
-          SAME local stream passed to pc.addTrack, so the remote side's
-          ontrack event delivers both tracks on one stream object) — so
-          mounting this unconditionally would double that track's audio. */}
-      {!tile.muted && tile.stream && !live && (
-        <audio
-          autoPlay
-          ref={(el) => {
-            if (el && el.srcObject !== tile.stream) el.srcObject = tile.stream;
-          }}
-        />
       )}
       <span className="absolute bottom-1 left-1.5 flex items-center gap-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white">
         {tile.deafened ? (
@@ -158,6 +133,7 @@ export default function CallWindow() {
   // Dragging a window that already fills the screen does nothing but fight the
   // Fullscreen API's own positioning.
   const { position, dragging, handleProps } = useDraggable(windowRef, POSITION_STORAGE_KEY, isFullscreen);
+  const [memberMenu, setMemberMenu] = useState<CallMemberMenuTarget | null>(null);
   const [togglingCamera, setTogglingCamera] = useState(false);
   const [togglingScreen, setTogglingScreen] = useState(false);
   const [micMenuOpen, setMicMenuOpen] = useState(false);
@@ -197,7 +173,6 @@ export default function CallWindow() {
         code: p.code,
         displayName: p.displayName,
         stream: group.remoteStreams[p.code] ?? null,
-        muted: true,
         micMuted: p.muted,
         deafened: p.deafened,
       }))
@@ -207,7 +182,6 @@ export default function CallWindow() {
             code: direct.activeCall.peerCode,
             displayName: direct.activeCall.peerDisplayName,
             stream: direct.remoteStream,
-            muted: false,
             micMuted: direct.peerMuted,
           },
         ]
@@ -316,13 +290,20 @@ export default function CallWindow() {
               code: "me",
               displayName: "You",
               stream: localStream,
-              muted: true,
               micMuted: muted,
               deafened: isGroup ? group.deafened : false,
             }}
           />
           {tiles.map((t) => (
-            <VideoTile key={t.code} tile={t} />
+            <VideoTile
+              key={t.code}
+              tile={t}
+              // Your own tile opens nothing — there is nothing on it to adjust.
+              onContextMenu={(e) => {
+                e.preventDefault();
+                setMemberMenu({ code: t.code, displayName: t.displayName, x: e.clientX, y: e.clientY });
+              }}
+            />
           ))}
         </div>
 
@@ -409,6 +390,8 @@ export default function CallWindow() {
             <PhoneOff size={16} />
           </button>
         </div>
+
+        {memberMenu && <CallMemberMenu target={memberMenu} onClose={() => setMemberMenu(null)} />}
       </motion.div>
     </AnimatePresence>
   );

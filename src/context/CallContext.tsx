@@ -32,6 +32,7 @@ import {
 import { acquireMicTrack, listMicrophones, type MicrophoneOption } from "@/lib/audioDevices";
 import { isGroupCallActive, markDirectCallActive } from "@/lib/callActivity";
 import { useSound } from "@/context/SoundContext";
+import PeerAudioSink from "@/components/PeerAudioSink";
 
 type CallStatus = "ringing-out" | "ringing-in" | "connecting" | "connected";
 
@@ -663,6 +664,12 @@ export function CallProvider({ myCode, myDisplayName, children }: { myCode: stri
         refreshMicrophones,
       }}
     >
+      {/* The peer's audio used to ride the video tile in CallWindow, which
+          meant it existed only while their camera was on and needed a second
+          fallback element for when it wasn't. One sink, mounted for the whole
+          call, is both simpler and the only way per-person volume can apply
+          regardless of camera state. */}
+      {activeCall && <PeerAudioSink code={activeCall.peerCode} stream={remoteStream} />}
       {children}
     </CallContext.Provider>
   );

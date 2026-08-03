@@ -30,6 +30,7 @@ import {
 import { acquireMicTrack, listMicrophones, type MicrophoneOption } from "@/lib/audioDevices";
 import { isDirectCallActive, markGroupCallActive } from "@/lib/callActivity";
 import { useSound } from "@/context/SoundContext";
+import PeerAudioSink from "@/components/PeerAudioSink";
 
 // The mirror of CallContext's guard: CallWindow renders one call mode and
 // gives group calls priority, so a 1:1 call running underneath a group call
@@ -69,8 +70,6 @@ interface GroupCallContextValue {
   selectMicrophone: (deviceId: string) => Promise<void>;
   refreshMicrophones: () => Promise<void>;
   remoteStreams: Record<string, MediaStream>;
-  locallyMutedPeers: Set<string>;
-  toggleLocalMute: (peerCode: string) => void;
 }
 
 const GroupCallContext = createContext<GroupCallContextValue | null>(null);
@@ -99,7 +98,6 @@ export function GroupCallProvider({
   const [remoteStreams, setRemoteStreams] = useState<Record<string, MediaStream>>({});
   // Purely local, per-viewer preference — muting how a peer sounds to you
   // doesn't affect what anyone else hears, so no signaling needed.
-  const [locallyMutedPeers, setLocallyMutedPeers] = useState<Set<string>>(new Set());
 
   const localStreamRef = useRef<MediaStream | null>(null);
   const peerConnectionsRef = useRef<Map<string, RTCPeerConnection>>(new Map());
@@ -590,15 +588,6 @@ export function GroupCallProvider({
     setCameraOn(true);
   }, [cameraOn, screenSharing, myCode, stopScreenTrack]);
 
-  const toggleLocalMute = useCallback((peerCode: string) => {
-    setLocallyMutedPeers((prev) => {
-      const next = new Set(prev);
-      if (next.has(peerCode)) next.delete(peerCode);
-      else next.add(peerCode);
-      return next;
-    });
-  }, []);
-
   return (
     <GroupCallContext.Provider
       value={{
@@ -620,19 +609,10 @@ export function GroupCallProvider({
         selectMicrophone,
         refreshMicrophones,
         remoteStreams,
-        locallyMutedPeers,
-        toggleLocalMute,
       }}
     >
       {Object.entries(remoteStreams).map(([code, stream]) => (
-        <audio
-          key={code}
-          autoPlay
-          muted={deafened || locallyMutedPeers.has(code)}
-          ref={(el) => {
-            if (el) el.srcObject = stream;
-          }}
-        />
+        <PeerAudioSink key={code} code={code} stream={stream} deafened={deafened} />
       ))}
       {children}
     </GroupCallContext.Provider>

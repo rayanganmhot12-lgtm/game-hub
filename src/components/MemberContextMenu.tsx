@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { User, AtSign, Volume2, VolumeX, UserCog, ChevronRight, Check } from "lucide-react";
-import { useGroupCall } from "@/context/GroupCallContext";
+import { User, AtSign, UserCog, ChevronRight } from "lucide-react";
+import PeerAudioControls from "@/components/PeerAudioControls";
 import { setMemberRole, type GroupRole } from "@/lib/groupRealtime";
 import { RoleChip } from "@/components/ServerModerationTabs";
 import type { GroupMemberEntry } from "@/components/ServerChips";
@@ -39,7 +39,6 @@ export default function MemberContextMenu({
   onMention: (member: GroupMemberEntry) => void;
   onEditNickname: (member: GroupMemberEntry) => void;
 }) {
-  const { locallyMutedPeers, toggleLocalMute } = useGroupCall();
   const [rolesOpen, setRolesOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -61,7 +60,6 @@ export default function MemberContextMenu({
   const { member } = target;
   const isSelf = member.code === myCode;
   const canEditOthersNickname = myCode === creatorCode;
-  const isLocallyMuted = locallyMutedPeers.has(member.code);
 
   const left = Math.min(target.x, window.innerWidth - 220);
   const top = Math.min(target.y, window.innerHeight - 320);
@@ -104,22 +102,10 @@ export default function MemberContextMenu({
         {!isSelf && (
           <>
             <div className="my-1 border-t border-border/60" />
-            <button
-              onClick={() => toggleLocalMute(member.code)}
-              className="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-surface-2"
-            >
-              <span className="flex items-center gap-2">
-                {isLocallyMuted ? <VolumeX size={13} /> : <Volume2 size={13} />}
-                Mute
-              </span>
-              <span
-                className={`flex h-3.5 w-3.5 items-center justify-center rounded-sm border ${
-                  isLocallyMuted ? "border-accent-bright bg-accent-bright text-black" : "border-muted"
-                }`}
-              >
-                {isLocallyMuted && <Check size={10} />}
-              </span>
-            </button>
+            {/* Shared with the call's own menu, so muting someone from the
+                member list and from a video tile are the same setting rather
+                than two that drift. */}
+            <PeerAudioControls code={member.code} />
           </>
         )}
 
