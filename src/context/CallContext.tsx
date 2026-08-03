@@ -29,6 +29,7 @@ import {
 } from "@/lib/videoCall";
 import { acquireMicTrack, listMicrophones, type MicrophoneOption } from "@/lib/audioDevices";
 import { isGroupCallActive, markDirectCallActive } from "@/lib/callActivity";
+import { useSound } from "@/context/SoundContext";
 
 type CallStatus = "ringing-out" | "ringing-in" | "connecting" | "connected";
 
@@ -73,6 +74,9 @@ interface CallContextValue {
 const CallContext = createContext<CallContextValue | null>(null);
 
 export function CallProvider({ myCode, myDisplayName, children }: { myCode: string; myDisplayName: string; children: ReactNode }) {
+  // There is no deafen in a 1:1 call — it exists only for server voice, in
+  // ServerUserPanel — so only the mic pair is used here.
+  const { playMicToggle } = useSound();
   const [incomingCall, setIncomingCall] = useState<IncomingCallPayload | null>(null);
   const [activeCall, setActiveCall] = useState<ActiveCall | null>(null);
   const [muted, setMuted] = useState(false);
@@ -413,12 +417,15 @@ export function CallProvider({ myCode, myDisplayName, children }: { myCode: stri
   }, [incomingCall, myCode]);
 
   const toggleMuted = useCallback(() => {
+    // From the ref rather than the updater: the sound has to be chosen once,
+    // and setState updaters can run more than once for a single call.
+    playMicToggle(!mutedRef.current);
     setMuted((prev) => {
       const next = !prev;
       localStreamRef.current?.getAudioTracks().forEach((track) => (track.enabled = !next));
       return next;
     });
-  }, []);
+  }, [playMicToggle]);
 
   const refreshMicrophones = useCallback(async () => {
     setMicrophones(await listMicrophones());

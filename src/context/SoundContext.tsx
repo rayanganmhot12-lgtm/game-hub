@@ -1,7 +1,19 @@
 "use client";
 
 import { createContext, useContext, useEffect, useRef, useState, ReactNode } from "react";
-import { playClickSound, playHoverSound, playSuccessSound, playWarningSound, playPlusFanfare, playAnnouncementSound, startRingtone } from "@/lib/sound";
+import {
+  playClickSound,
+  playHoverSound,
+  playSuccessSound,
+  playWarningSound,
+  playPlusFanfare,
+  playAnnouncementSound,
+  playMuteSound,
+  playUnmuteSound,
+  playDeafenSound,
+  playUndeafenSound,
+  startRingtone,
+} from "@/lib/sound";
 
 const SOUND_STORAGE_KEY = "gamehub-sound-muted";
 
@@ -13,6 +25,10 @@ interface SoundContextValue {
   playRingtone: () => () => void;
   playPlus: () => void;
   playAnnouncement: () => void;
+  // Take the state being moved to rather than a toggle, so the caller can't
+  // play the wrong half by reading `muted` before its own setState lands.
+  playMicToggle: (muted: boolean) => void;
+  playDeafenToggle: (deafened: boolean) => void;
 }
 
 const SoundContext = createContext<SoundContextValue | null>(null);
@@ -84,8 +100,32 @@ export function SoundProvider({ children }: { children: ReactNode }) {
     if (!mutedRef.current) playAnnouncementSound();
   }
 
+  function playMicToggle(micMuted: boolean) {
+    if (mutedRef.current) return;
+    if (micMuted) playMuteSound();
+    else playUnmuteSound();
+  }
+
+  function playDeafenToggle(deafened: boolean) {
+    if (mutedRef.current) return;
+    if (deafened) playDeafenSound();
+    else playUndeafenSound();
+  }
+
   return (
-    <SoundContext.Provider value={{ muted, toggleMuted, playSuccess, playWarning, playRingtone, playPlus, playAnnouncement }}>
+    <SoundContext.Provider
+      value={{
+        muted,
+        toggleMuted,
+        playSuccess,
+        playWarning,
+        playRingtone,
+        playPlus,
+        playAnnouncement,
+        playMicToggle,
+        playDeafenToggle,
+      }}
+    >
       {children}
     </SoundContext.Provider>
   );

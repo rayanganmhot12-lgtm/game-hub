@@ -28,6 +28,7 @@ import {
 } from "@/lib/videoCall";
 import { acquireMicTrack, listMicrophones, type MicrophoneOption } from "@/lib/audioDevices";
 import { isDirectCallActive, markGroupCallActive } from "@/lib/callActivity";
+import { useSound } from "@/context/SoundContext";
 
 // The mirror of CallContext's guard: CallWindow renders one call mode and
 // gives group calls priority, so a 1:1 call running underneath a group call
@@ -80,6 +81,9 @@ export function GroupCallProvider({
   myDisplayName: string;
   children: ReactNode;
 }) {
+  // Routed through SoundContext like every other sound, so the app's own sound
+  // toggle silences these along with the rest.
+  const { playMicToggle, playDeafenToggle } = useSound();
   const [activeGroupCall, setActiveGroupCall] = useState<ActiveGroupCall | null>(null);
   const [peers, setPeers] = useState<GroupCallPeer[]>([]);
   const [muted, setMuted] = useState(false);
@@ -106,6 +110,8 @@ export function GroupCallProvider({
   // Mirrors `muted` for use inside callbacks (joinGroupCall, toggleDeafen)
   // without recreating them on every mute toggle.
   const mutedRef = useRef(false);
+  // Same, for picking which of the deafen pair of tones to play.
+  const deafenedRef = useRef(false);
   // Read when joining, so a mic chosen earlier is the one that opens rather
   // than the system default.
   const micDeviceIdRef = useRef<string | null>(null);
@@ -119,6 +125,10 @@ export function GroupCallProvider({
   useEffect(() => {
     mutedRef.current = muted;
   }, [muted]);
+
+  useEffect(() => {
+    deafenedRef.current = deafened;
+  }, [deafened]);
 
   const disconnectFromPeer = useCallback((peerCode: string) => {
     const pc = peerConnectionsRef.current.get(peerCode);
@@ -352,17 +362,22 @@ export function GroupCallProvider({
   );
 
   const toggleMuted = useCallback(() => {
+    // From the ref rather than the updater: the sound has to be chosen once,
+    // and setState updaters can run more than once for a single call.
+    playMicToggle(!mutedRef.current);
     setMuted((prev) => {
       const next = !prev;
       localStreamRef.current?.getAudioTracks().forEach((track) => (track.enabled = !next));
       return next;
     });
     // Unmuting while deafened also restores hearing — same as Discord,
-    // where reaching for your mic implies you want back into the call.
+    // where reaching for your mic implies you want back into the call. No
+    // second tone for it: one press is one sound.
     setDeafened((prev) => (prev ? false : prev));
-  }, []);
+  }, [playMicToggle]);
 
   const toggleDeafen = useCallback(() => {
+    playDeafenToggle(!deafenedRef.current);
     setDeafened((prev) => {
       const next = !prev;
       if (next) {
@@ -376,7 +391,7 @@ export function GroupCallProvider({
       }
       return next;
     });
-  }, []);
+  }, [playDeafenToggle]);
 
   const refreshMicrophones = useCallback(async () => {
     setMicrophones(await listMicrophones());

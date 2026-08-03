@@ -65,6 +65,28 @@ export function playAnnouncementSound() {
   [880, 660, 880, 660, 1046].forEach((freq, i) => tone(freq, 0.35, 0.06, "sine", i * 1.0));
 }
 
+// Pressing mute changed a button's colour and nothing else, which is no use
+// when the button isn't where you're looking. The direction carries the
+// meaning: muting falls, unmuting rises, so the two are told apart without
+// looking at anything. Deafen is the same pair a fifth lower and on a triangle
+// wave — duller and heavier, because it is the heavier act, and distinct from
+// the mic pair when both live on the same panel.
+export function playMuteSound() {
+  [660, 440].forEach((freq, i) => tone(freq, 0.09, 0.05, "sine", i * 0.07));
+}
+
+export function playUnmuteSound() {
+  [440, 660].forEach((freq, i) => tone(freq, 0.09, 0.05, "sine", i * 0.07));
+}
+
+export function playDeafenSound() {
+  [330, 220].forEach((freq, i) => tone(freq, 0.13, 0.055, "triangle", i * 0.08));
+}
+
+export function playUndeafenSound() {
+  [220, 330].forEach((freq, i) => tone(freq, 0.13, 0.055, "triangle", i * 0.08));
+}
+
 // Loops a two-note ring burst every 2s until the returned function is called
 // (call answered, declined, or hung up).
 export function startRingtone(): () => void {
