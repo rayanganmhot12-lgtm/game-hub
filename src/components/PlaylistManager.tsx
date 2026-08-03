@@ -1,12 +1,29 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Upload, Play, Pause, Trash2, Music2, ListMusic, ChevronUp, ChevronDown, GripVertical } from "lucide-react";
+import { Upload, Play, Pause, Trash2, ListMusic, ChevronUp, ChevronDown, GripVertical } from "lucide-react";
 import { useMusicPlayer } from "@/context/MusicPlayerContext";
 import { useToast } from "@/context/ToastContext";
+import { useTrackDurations } from "@/hooks/useTrackDurations";
 import EmptyState from "@/components/EmptyState";
+import Equalizer from "@/components/Equalizer";
 import PageHeader from "@/components/PageHeader";
 import type { Track } from "@/context/MusicPlayerContext";
+
+function formatDuration(seconds: number | undefined) {
+  if (seconds === undefined) return "—";
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${String(secs).padStart(2, "0")}`;
+}
+
+function formatTotal(seconds: number) {
+  const mins = Math.round(seconds / 60);
+  if (mins < 60) return `${mins} min`;
+  const hours = Math.floor(mins / 60);
+  const rest = mins % 60;
+  return rest === 0 ? `${hours} hr` : `${hours} hr ${rest} min`;
+}
 
 function uploadWithProgress(file: File, onProgress: (pct: number) => void): Promise<{ ok: boolean; error?: string }> {
   return new Promise((resolve) => {
@@ -40,12 +57,22 @@ export default function PlaylistManager({ isAdmin }: { isAdmin: boolean }) {
   const { tracks, currentTrack, isPlaying, playTrackAt, togglePlay, removeTrack, refreshTracks } =
     useMusicPlayer();
   const { showToast } = useToast();
+  const durations = useTrackDurations(tracks);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [reordering, setReordering] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+  // A running time is only worth stating once every track has reported one —
+  // a total that silently omits the tracks still being probed is a wrong
+  // number, not a partial one.
+  const knownDurations = tracks.map((t) => durations[t.id]).filter((d): d is number => d !== undefined);
+  const totalLabel =
+    tracks.length > 0 && knownDurations.length === tracks.length
+      ? formatTotal(knownDurations.reduce((sum, d) => sum + d, 0))
+      : null;
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
@@ -111,7 +138,7 @@ export default function PlaylistManager({ isAdmin }: { isAdmin: boolean }) {
   }
 
   return (
-    <div className="mx-auto max-w-2xl pb-16">
+    <div className="mx-auto max-w-3xl">
       <PageHeader
         title="Playlist"
         subtitle={
@@ -119,12 +146,30 @@ export default function PlaylistManager({ isAdmin }: { isAdmin: boolean }) {
             ? "Tracks you add here play for everyone using Game Hub."
             : "The background playlist for Game Hub. Sit back and listen."
         }
+        action={
+          tracks.length > 0 ? (
+            // What the page is a collection of, stated where the page is
+            // named. Previously you had to count the rows.
+            <div className="flex items-center gap-2 rounded-full border border-border/70 bg-surface-2/60 px-3.5 py-1.5 text-xs">
+              <ListMusic size={13} className="text-accent-bright" />
+              <span className="font-medium text-foreground">
+                {tracks.length} {tracks.length === 1 ? "track" : "tracks"}
+              </span>
+              {totalLabel && (
+                <>
+                  <span className="text-border">·</span>
+                  <span className="text-muted">{totalLabel}</span>
+                </>
+              )}
+            </div>
+          ) : undefined
+        }
       />
 
       {isAdmin && (
-        <label className="mt-6 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border/70 bg-surface/20 p-8 text-center transition-colors hover:border-accent/50 hover:bg-accent/5">
-          <div className="icon-badge h-12 w-12">
-            <Upload size={22} />
+        <label className="mt-6 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border/70 bg-surface/20 p-6 text-center transition-colors hover:border-accent/50 hover:bg-accent/5">
+          <div className="icon-badge h-11 w-11">
+            <Upload size={20} />
           </div>
           <span className="text-sm text-foreground">
             {uploading ? `Uploading… ${progress}%` : "Click to add MP3, WAV, OGG, M4A, or FLAC files"}
@@ -150,13 +195,18 @@ export default function PlaylistManager({ isAdmin }: { isAdmin: boolean }) {
         </label>
       )}
 
-      <div className="mt-6 flex flex-col gap-2">
-        {tracks.length === 0 ? (
+      {tracks.length === 0 ? (
+        <div className="mt-6">
           <EmptyState icon={ListMusic} title="No tracks yet">
             {isAdmin ? "Add your first one above." : undefined}
           </EmptyState>
-        ) : (
-          tracks.map((track, index) => {
+        </div>
+      ) : (
+        // One surface holding every row. As individually bordered cards, a
+        // dozen tracks read as a dozen unrelated objects rather than as one
+        // ordered list.
+        <div className="panel mt-6 p-2">
+          {tracks.map((track, index) => {
             const isCurrent = currentTrack?.id === track.id;
             const isDragging = draggedIndex === index;
             const isDragTarget = dragOverIndex === index && draggedIndex !== null && draggedIndex !== index;
@@ -177,45 +227,69 @@ export default function PlaylistManager({ isAdmin }: { isAdmin: boolean }) {
                   e.preventDefault();
                   handleDrop(index);
                 }}
-                className={`flex items-center gap-3 rounded-xl border p-3 transition-colors ${
-                  isCurrent
-                    ? "border-accent/40 bg-accent/5 shadow-[0_0_0_1px_rgba(var(--accent-rgb),0.15)]"
-                    : "border-border bg-surface"
-                } ${isDragging ? "opacity-40" : ""} ${isDragTarget ? "border-accent/70 bg-accent/10" : ""}`}
+                className={`group flex items-center gap-3 rounded-lg px-2 py-1.5 transition-colors ${
+                  isCurrent ? "bg-accent/10 ring-1 ring-accent/25" : "hover:bg-surface-2/70"
+                } ${isDragging ? "opacity-40" : ""} ${isDragTarget ? "bg-accent/15 ring-1 ring-accent/45" : ""}`}
               >
                 {isAdmin && (
                   <span
-                    className="shrink-0 cursor-grab text-muted active:cursor-grabbing"
+                    className="shrink-0 cursor-grab text-muted opacity-0 transition-opacity group-hover:opacity-100 active:cursor-grabbing"
                     title="Drag to reorder"
                   >
-                    <GripVertical size={16} />
+                    <GripVertical size={14} />
                   </span>
                 )}
-                <button
-                  onClick={() => (isCurrent ? togglePlay() : playTrackAt(index))}
-                  title={isCurrent && isPlaying ? "Pause" : "Play"}
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent-bright to-accent text-black transition-transform duration-100 hover:brightness-105 active:scale-90"
-                >
-                  {isCurrent && isPlaying ? (
-                    <Pause size={14} fill="currentColor" />
-                  ) : (
-                    <Play size={14} fill="currentColor" />
-                  )}
-                </button>
-                <div className="flex min-w-0 flex-1 items-center gap-2">
-                  <Music2 size={14} className="shrink-0 text-muted" />
-                  <span className="truncate text-sm text-foreground">{track.title}</span>
+
+                {/* Position, playing state and the play control share one slot.
+                    A permanent accent circle on every row made all of them
+                    shout at the same volume; hover is when a row needs to
+                    offer a control, and the rest of the time the number is the
+                    more useful thing to show. */}
+                <div className="relative flex h-8 w-8 shrink-0 items-center justify-center">
+                  <span
+                    className={`flex h-full items-center justify-center text-xs tabular-nums transition-opacity group-hover:opacity-0 ${
+                      isCurrent ? "text-accent-bright" : "text-muted"
+                    }`}
+                  >
+                    {isCurrent && isPlaying ? <Equalizer className="h-3.5" /> : index + 1}
+                  </span>
+                  <button
+                    onClick={() => (isCurrent ? togglePlay() : playTrackAt(index))}
+                    title={isCurrent && isPlaying ? "Pause" : "Play"}
+                    className="absolute inset-0 flex items-center justify-center rounded-md text-foreground opacity-0 transition-opacity duration-100 hover:text-accent-bright group-hover:opacity-100 focus-visible:opacity-100"
+                  >
+                    {isCurrent && isPlaying ? (
+                      <Pause size={15} fill="currentColor" />
+                    ) : (
+                      <Play size={15} fill="currentColor" />
+                    )}
+                  </button>
                 </div>
+
+                <span
+                  className={`min-w-0 flex-1 truncate text-sm ${
+                    isCurrent ? "font-medium text-accent-bright" : "text-foreground"
+                  }`}
+                >
+                  {track.title}
+                </span>
+
+                <span className="w-11 shrink-0 text-right text-xs tabular-nums text-muted">
+                  {formatDuration(durations[track.id])}
+                </span>
+
                 {isAdmin && (
-                  <>
-                    <div className="flex shrink-0 flex-col">
+                  // Held open rather than hidden, so revealing the controls
+                  // doesn't shove the durations column sideways.
+                  <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+                    <div className="flex flex-col">
                       <button
                         onClick={() => moveTrack(index, -1)}
                         disabled={index === 0 || reordering}
                         title="Move up"
                         className="rounded p-0.5 text-muted transition-transform duration-100 hover:text-foreground active:scale-90 disabled:opacity-30"
                       >
-                        <ChevronUp size={14} />
+                        <ChevronUp size={13} />
                       </button>
                       <button
                         onClick={() => moveTrack(index, 1)}
@@ -223,23 +297,23 @@ export default function PlaylistManager({ isAdmin }: { isAdmin: boolean }) {
                         title="Move down"
                         className="rounded p-0.5 text-muted transition-transform duration-100 hover:text-foreground active:scale-90 disabled:opacity-30"
                       >
-                        <ChevronDown size={14} />
+                        <ChevronDown size={13} />
                       </button>
                     </div>
                     <button
                       onClick={() => removeTrack(track.id)}
                       title="Remove track"
-                      className="shrink-0 rounded-md p-2 text-muted transition-transform duration-100 hover:text-red-400 active:scale-90"
+                      className="rounded-md p-1.5 text-muted transition-transform duration-100 hover:text-red-400 active:scale-90"
                     >
-                      <Trash2 size={15} />
+                      <Trash2 size={14} />
                     </button>
-                  </>
+                  </div>
                 )}
               </div>
             );
-          })
-        )}
-      </div>
+          })}
+        </div>
+      )}
     </div>
   );
 }
