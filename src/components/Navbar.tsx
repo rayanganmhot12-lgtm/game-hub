@@ -51,7 +51,7 @@ export default function Navbar({ points }: { points: number }) {
   }
 
   return (
-    <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-border/60 bg-surface/70 px-4 backdrop-blur-xl">
+    <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-border/60 bg-gradient-to-b from-surface/85 to-surface/60 px-4 shadow-[0_10px_30px_-24px_rgba(0,0,0,0.9)] backdrop-blur-xl">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-accent/50 to-transparent"
@@ -89,9 +89,9 @@ export default function Navbar({ points }: { points: number }) {
           <Tv size={15} />
         </Link>
 
-        <Link href="/store" className="btn-ghost !px-2.5" title="Store">
-          <Gem size={15} className="text-accent-bright" />
-          <span className="hidden sm:inline">{points}</span>
+        <Link href="/store" className="points-chip" title="Store">
+          <Gem size={14} />
+          <span>{points}</span>
         </Link>
 
         <button onClick={handleLogout} className="btn-ghost !px-2.5" title="Log out">
