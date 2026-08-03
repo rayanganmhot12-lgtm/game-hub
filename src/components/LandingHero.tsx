@@ -1,8 +1,9 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Gamepad2, Library, BarChart3, Search } from "lucide-react";
+import { Gamepad2 } from "lucide-react";
 import AuthForm from "@/components/AuthForm";
+import { version as appVersion } from "../../package.json";
 
 const container = {
   hidden: {},
@@ -14,6 +15,10 @@ const item = {
   show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" as const } },
 };
 
+// A sign-in screen, not a landing page. Everyone who reaches it has already
+// downloaded and installed the app, so the three feature cards that used to sit
+// below restated the sentence above them to an audience that needed no
+// convincing. What is left has one job.
 export default function LandingHero() {
   return (
     <motion.div
@@ -28,55 +33,37 @@ export default function LandingHero() {
       />
 
       <motion.div variants={item} className="relative flex items-center gap-3">
+        {/* The rotation used to run forever. A permanent animation on a screen
+            you sit still and type into is noise; it plays once on arrival. */}
         <motion.div
-          animate={{ rotate: [0, -6, 0, 6, 0] }}
-          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+          initial={{ rotate: -8 }}
+          animate={{ rotate: 0 }}
+          transition={{ type: "spring", stiffness: 220, damping: 12 }}
           className="icon-badge h-14 w-14"
         >
           <Gamepad2 className="glow-accent-text" size={30} />
         </motion.div>
-        <h1 className="text-4xl font-extrabold tracking-tight text-foreground">
-          Game<span className="text-gradient">Hub</span>
-        </h1>
+        {/* The app's own wordmark treatment. This screen used to draw "Game" in
+            plain foreground and gradient only "Hub", at a hand-rolled size — a
+            third variant of the identity, on the largest type a new user sees. */}
+        <h1 className="page-title">GameHub</h1>
       </motion.div>
 
-      <motion.p variants={item} className="relative mt-4 max-w-md text-center text-muted">
-        Your entire game library, unified. Sign in, then connect your platforms and see every
-        game you own in one glowing dashboard.
+      <motion.p variants={item} className="relative mt-3 max-w-sm text-center text-sm text-muted">
+        Your entire game library, unified across every platform.
       </motion.p>
 
-      <motion.div variants={item} className="relative mt-10">
+      <motion.div variants={item} className="relative mt-8">
         <AuthForm />
       </motion.div>
 
-      <motion.div
-        variants={item}
-        className="relative mt-16 grid w-full max-w-3xl grid-cols-1 gap-4 sm:grid-cols-3"
-      >
-        <FeatureCard icon={Library} title="Unified Library" text="Every owned game, every platform, one grid." />
-        <FeatureCard icon={Search} title="Search & Filter" text="Find games by platform, playtime, or install state." />
-        <FeatureCard icon={BarChart3} title="Stats Dashboard" text="Total playtime, breakdowns, recently played." />
+      {/* Which build is in front of you, without opening anything. */}
+      <motion.div variants={item} className="relative mt-5 flex items-center gap-2 text-[11px]">
+        <span className="rounded-full border border-accent/40 px-1.5 py-0.5 font-semibold uppercase tracking-wide text-accent-bright">
+          Beta
+        </span>
+        <span className="text-muted">v{appVersion}</span>
       </motion.div>
     </motion.div>
-  );
-}
-
-function FeatureCard({
-  icon: Icon,
-  title,
-  text,
-}: {
-  icon: typeof Library;
-  title: string;
-  text: string;
-}) {
-  return (
-    <div className="panel panel-hover p-5 text-center">
-      <div className="icon-badge mx-auto h-11 w-11">
-        <Icon size={22} />
-      </div>
-      <h3 className="mt-3 text-sm font-semibold text-foreground">{title}</h3>
-      <p className="mt-1 text-xs text-muted">{text}</p>
-    </div>
   );
 }
