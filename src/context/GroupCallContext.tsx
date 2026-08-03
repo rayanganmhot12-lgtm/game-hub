@@ -13,6 +13,7 @@ import {
   sendGroupCallCandidate,
   listenForGroupCallCandidates,
   clearGroupCallSignals,
+  updateGroupCallState,
   setCallPresence,
   clearCallPresence,
   type GroupCallParticipant,
@@ -36,9 +37,11 @@ import { useSound } from "@/context/SoundContext";
 // stay mutually exclusive at the entry points.
 const IN_DIRECT_CALL_ERROR = "You're already in a call — hang up first to join a voice channel.";
 
-interface GroupCallPeer {
+export interface GroupCallPeer {
   code: string;
   displayName: string;
+  muted: boolean;
+  deafened: boolean;
 }
 
 interface ActiveGroupCall {
@@ -129,6 +132,19 @@ export function GroupCallProvider({
   useEffect(() => {
     deafenedRef.current = deafened;
   }, [deafened]);
+
+  // Publish whenever either changes, so the roster and the call tiles on
+  // everyone else's screen reflect it. Guarded on actually being in a call:
+  // updateGroupCallState uses a partial write, which on a path that no longer
+  // exists would recreate the participant as two stray booleans.
+  useEffect(() => {
+    const groupId = activeGroupCall?.groupId;
+    if (!groupId) return;
+    updateGroupCallState(groupId, myCode, { muted, deafened }).catch(() => {
+      // A failed publish costs other people an out-of-date icon; it must not
+      // interrupt the call it describes.
+    });
+  }, [activeGroupCall?.groupId, myCode, muted, deafened]);
 
   const disconnectFromPeer = useCallback((peerCode: string) => {
     const pc = peerConnectionsRef.current.get(peerCode);
@@ -330,7 +346,12 @@ export function GroupCallProvider({
         setLocalStream(stream);
         groupIdRef.current = groupId;
 
-        await joinGroupCallRealtime(groupId, myCode, myDisplayName);
+        // The standing mute preference is carried into the published record
+        // too, or someone who joins already muted would appear open.
+        await joinGroupCallRealtime(groupId, myCode, myDisplayName, {
+          muted: mutedRef.current,
+          deafened: deafenedRef.current,
+        });
         await setCallPresence(myCode, groupId, groupName);
         setActiveGroupCall({ groupId, groupName, sessionId: crypto.randomUUID() });
         established = true;
@@ -339,7 +360,16 @@ export function GroupCallProvider({
           groupId,
           (participants: Array<GroupCallParticipant & { code: string }>) => {
             const codes = new Set(participants.map((p) => p.code));
-            setPeers(participants.filter((p) => p.code !== myCode).map((p) => ({ code: p.code, displayName: p.displayName })));
+            setPeers(
+              participants
+                .filter((p) => p.code !== myCode)
+                .map((p) => ({
+                  code: p.code,
+                  displayName: p.displayName,
+                  muted: p.muted ?? false,
+                  deafened: p.deafened ?? false,
+                }))
+            );
 
             for (const p of participants) {
               if (p.code !== myCode && !peerConnectionsRef.current.has(p.code)) {

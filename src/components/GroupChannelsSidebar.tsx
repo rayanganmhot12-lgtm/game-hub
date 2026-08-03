@@ -22,6 +22,8 @@ import {
   Plus,
   Trash2,
   UserCog,
+  MicOff,
+  HeadphoneOff,
 } from "lucide-react";
 import { useToast } from "@/context/ToastContext";
 import { formatFriendCode } from "@/lib/friendCode";
@@ -153,7 +155,9 @@ export default function GroupChannelsSidebar({
   const [joiningVoice, setJoiningVoice] = useState(false);
   // Voice is per-server (joinGroupCall takes a groupId, not a channel id), so
   // this one roster is who's in voice for the whole server.
-  const [voicePeers, setVoicePeers] = useState<Array<{ code: string; displayName: string }>>([]);
+  const [voicePeers, setVoicePeers] = useState<
+    Array<{ code: string; displayName: string; muted?: boolean; deafened?: boolean }>
+  >([]);
   const [liveName, setLiveName] = useState(groupName);
   const [icon, setIcon] = useState<string | null>(null);
   const [profile, setProfile] = useState<GroupProfile>({});
@@ -366,7 +370,15 @@ export default function GroupChannelsSidebar({
                     <ProfileAvatar code={peer.code} displayName={peer.displayName} size={22} />
                     <span className="absolute -bottom-0.5 -right-0.5 block h-2 w-2 rounded-full bg-emerald-400 ring-2 ring-surface" />
                   </span>
-                  <span className="truncate text-foreground">{peer.displayName}</span>
+                  <span className="min-w-0 flex-1 truncate text-foreground">{peer.displayName}</span>
+                  {/* Deafened wins: it already implies a muted mic, and
+                      "can't hear you" is the fact worth knowing before you
+                      start talking to someone. */}
+                  {peer.deafened ? (
+                    <HeadphoneOff size={12} className="shrink-0 text-red-400" aria-label="Deafened" />
+                  ) : peer.muted ? (
+                    <MicOff size={12} className="shrink-0 text-red-400" aria-label="Muted" />
+                  ) : null}
                 </div>
               ))}
             </div>

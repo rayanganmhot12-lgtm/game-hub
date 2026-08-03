@@ -14,6 +14,7 @@ import {
   MonitorOff,
   ChevronDown,
   Check,
+  HeadphoneOff,
 } from "lucide-react";
 import { useGroupCall } from "@/context/GroupCallContext";
 import { useCall } from "@/context/CallContext";
@@ -30,6 +31,11 @@ interface Tile {
   stream: MediaStream | null;
   // Whether this tile's <video> element should play its stream's audio.
   // The three tile kinds each need a different answer: the local "me" tile
+  // Published by the person themselves, so a silent tile is distinguishable
+  // from a muted one. Deafened outranks muted in the badge: deafening already
+  // implies a muted mic, and "cannot hear you" is the more useful fact.
+  micMuted?: boolean;
+  deafened?: boolean;
   // must never play back your own mic (instant self-echo the moment your
   // camera is on); group peer tiles must stay muted too, since
   // GroupCallContext already renders its own per-peer <audio> element for
@@ -129,7 +135,12 @@ function VideoTile({ tile }: { tile: Tile }) {
           }}
         />
       )}
-      <span className="absolute bottom-1 left-1.5 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white">
+      <span className="absolute bottom-1 left-1.5 flex items-center gap-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white">
+        {tile.deafened ? (
+          <HeadphoneOff size={11} className="shrink-0 text-red-400" aria-label="Deafened" />
+        ) : tile.micMuted ? (
+          <MicOff size={11} className="shrink-0 text-red-400" aria-label="Muted" />
+        ) : null}
         {tile.displayName}
       </span>
     </div>
@@ -182,9 +193,24 @@ export default function CallWindow() {
   const localStream = isGroup ? group.localStream : direct.localStream;
 
   const tiles: Tile[] = isGroup
-    ? group.peers.map((p) => ({ code: p.code, displayName: p.displayName, stream: group.remoteStreams[p.code] ?? null, muted: true }))
+    ? group.peers.map((p) => ({
+        code: p.code,
+        displayName: p.displayName,
+        stream: group.remoteStreams[p.code] ?? null,
+        muted: true,
+        micMuted: p.muted,
+        deafened: p.deafened,
+      }))
     : direct.activeCall
-      ? [{ code: direct.activeCall.peerCode, displayName: direct.activeCall.peerDisplayName, stream: direct.remoteStream, muted: false }]
+      ? [
+          {
+            code: direct.activeCall.peerCode,
+            displayName: direct.activeCall.peerDisplayName,
+            stream: direct.remoteStream,
+            muted: false,
+            micMuted: direct.peerMuted,
+          },
+        ]
       : [];
 
   async function handleToggleCamera() {
@@ -285,7 +311,16 @@ export default function CallWindow() {
         </div>
 
         <div className={`grid flex-1 gap-2 overflow-y-auto ${isFullscreen ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-1"}`}>
-          <VideoTile tile={{ code: "me", displayName: "You", stream: localStream, muted: true }} />
+          <VideoTile
+            tile={{
+              code: "me",
+              displayName: "You",
+              stream: localStream,
+              muted: true,
+              micMuted: muted,
+              deafened: isGroup ? group.deafened : false,
+            }}
+          />
           {tiles.map((t) => (
             <VideoTile key={t.code} tile={t} />
           ))}

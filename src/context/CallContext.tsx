@@ -16,6 +16,8 @@ import {
   listenForHangup,
   signalHangup,
   clearCallRoom,
+  setCallState,
+  listenForCallState,
   type IncomingCallPayload,
 } from "@/lib/webrtc";
 import { getModerationState, isRestricted } from "@/lib/moderationRealtime";
@@ -54,6 +56,8 @@ interface CallContextValue {
   incomingCall: IncomingCallPayload | null;
   activeCall: ActiveCall | null;
   muted: boolean;
+  /** Whether the person on the other end has their microphone muted. */
+  peerMuted: boolean;
   cameraOn: boolean;
   screenSharing: boolean;
   microphones: MicrophoneOption[];
@@ -80,6 +84,7 @@ export function CallProvider({ myCode, myDisplayName, children }: { myCode: stri
   const [incomingCall, setIncomingCall] = useState<IncomingCallPayload | null>(null);
   const [activeCall, setActiveCall] = useState<ActiveCall | null>(null);
   const [muted, setMuted] = useState(false);
+  const [peerMuted, setPeerMuted] = useState(false);
   const [cameraOn, setCameraOn] = useState(false);
   const [screenSharing, setScreenSharing] = useState(false);
   const [microphones, setMicrophones] = useState<MicrophoneOption[]>([]);
@@ -106,6 +111,31 @@ export function CallProvider({ myCode, myDisplayName, children }: { myCode: stri
   useEffect(() => {
     mutedRef.current = muted;
   }, [muted]);
+
+  // Publishing is an effect rather than lines inside startCall and acceptCall:
+  // both paths converge on the same activeCall, so doing it here means neither
+  // can forget, and it re-publishes on every toggle for free. It also lands
+  // after startCall's deliberate room clear, which would otherwise wipe it.
+  useEffect(() => {
+    const convId = activeCall?.convId;
+    if (!convId) return;
+    setCallState(convId, myCode, { muted }).catch(() => {
+      // An out-of-date icon on the other end is not worth breaking a call over.
+    });
+  }, [activeCall?.convId, myCode, muted]);
+
+  useEffect(() => {
+    if (!activeCall) return;
+    const unsubscribe = listenForCallState(activeCall.convId, activeCall.peerCode, (state) =>
+      setPeerMuted(state?.muted ?? false)
+    );
+    return () => {
+      unsubscribe();
+      // Cleared on the way out, or the next call would open showing the last
+      // person's mute state.
+      setPeerMuted(false);
+    };
+  }, [activeCall?.convId, activeCall?.peerCode, activeCall]);
 
   useEffect(() => {
     micDeviceIdRef.current = micDeviceId;
@@ -615,6 +645,7 @@ export function CallProvider({ myCode, myDisplayName, children }: { myCode: stri
         incomingCall,
         activeCall,
         muted,
+        peerMuted,
         cameraOn,
         screenSharing,
         microphones,

@@ -1,6 +1,17 @@
 "use client";
 
-import { ref, set, remove, push, onValue, onChildAdded, off, onDisconnect, type DataSnapshot } from "firebase/database";
+import {
+  ref,
+  set,
+  update,
+  remove,
+  push,
+  onValue,
+  onChildAdded,
+  off,
+  onDisconnect,
+  type DataSnapshot,
+} from "firebase/database";
 import { getFirebaseDb } from "@/lib/firebase";
 import { ICE_SERVERS } from "@/lib/webrtc";
 
@@ -9,18 +20,51 @@ export { ICE_SERVERS };
 export interface GroupCallParticipant {
   displayName: string;
   joinedAt: number;
+  // Optional because a client running an older build publishes neither, and a
+  // missing flag should read as "not muted" rather than break the roster.
+  muted?: boolean;
+  deafened?: boolean;
+}
+
+// Deafen is published beside mute rather than folded into it. They are
+// different statements: someone muted may still be listening, while someone
+// deafened cannot hear you at all — which is the one worth knowing before you
+// start talking to them.
+export interface GroupCallState {
+  muted: boolean;
+  deafened: boolean;
 }
 
 // A full-mesh voice call: every participant holds one RTCPeerConnection per
 // other participant. Presence here ("who's actually in the voice call right
 // now") is separate from the group's chat roster ("who's a member") — you
 // can be a group member without being in the current call.
-export function joinGroupCall(groupId: string, myCode: string, myDisplayName: string) {
+export function joinGroupCall(
+  groupId: string,
+  myCode: string,
+  myDisplayName: string,
+  state: GroupCallState
+) {
   const db = getFirebaseDb();
   if (!db) return Promise.reject(new Error("Voice calls aren't set up yet."));
   const myRef = ref(db, `groupCalls/${groupId}/participants/${myCode}`);
   onDisconnect(myRef).remove();
-  return set(myRef, { displayName: myDisplayName, joinedAt: Date.now() });
+  return set(myRef, {
+    displayName: myDisplayName,
+    joinedAt: Date.now(),
+    muted: state.muted,
+    deafened: state.deafened,
+  });
+}
+
+// `update` rather than `set`: this rewrites two fields of a record whose others
+// we aren't touching, and a partial write says so. Only call it while actually
+// in the call — on a path that doesn't exist, update creates it, which would
+// leave a participant made of nothing but two booleans.
+export function updateGroupCallState(groupId: string, myCode: string, state: GroupCallState) {
+  const db = getFirebaseDb();
+  if (!db) return Promise.resolve();
+  return update(ref(db, `groupCalls/${groupId}/participants/${myCode}`), state);
 }
 
 export function leaveGroupCall(groupId: string, myCode: string) {

@@ -1,6 +1,16 @@
 "use client";
 
-import { ref, set, onValue, off, remove, push, onChildAdded, type DataSnapshot } from "firebase/database";
+import {
+  ref,
+  set,
+  onValue,
+  off,
+  remove,
+  push,
+  onChildAdded,
+  onDisconnect,
+  type DataSnapshot,
+} from "firebase/database";
 import { getFirebaseDb } from "@/lib/firebase";
 
 // Public STUN only — works for most home networks doing direct peer-to-peer.
@@ -123,4 +133,38 @@ export function clearCallRoom(convId: string) {
   const db = getFirebaseDb();
   if (!db) return Promise.resolve();
   return remove(ref(db, `calls/${convId}`));
+}
+
+// Whether the person on the other end can currently be heard. Mute used to
+// live entirely in the muting person's own browser, so silence was
+// indistinguishable from a muted mic.
+//
+// There is no deafen here: a 1:1 call has no deafen control — that exists only
+// for server voice.
+export interface CallParticipantState {
+  muted: boolean;
+}
+
+// Must be written AFTER startCall clears the room, not before: the clear is
+// deliberate (a previous call's stale signalling would otherwise bind this
+// one) and would take this with it.
+export function setCallState(convId: string, myCode: string, state: CallParticipantState) {
+  const db = getFirebaseDb();
+  if (!db) return Promise.resolve();
+  const stateRef = ref(db, `calls/${convId}/state/${myCode}`);
+  onDisconnect(stateRef).remove();
+  return set(stateRef, state);
+}
+
+export function listenForCallState(
+  convId: string,
+  peerCode: string,
+  callback: (state: CallParticipantState | null) => void
+) {
+  const db = getFirebaseDb();
+  if (!db) return () => {};
+  const stateRef = ref(db, `calls/${convId}/state/${peerCode}`);
+  const handler = (snapshot: DataSnapshot) => callback(snapshot.val());
+  onValue(stateRef, handler);
+  return () => off(stateRef, "value", handler);
 }
