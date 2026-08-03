@@ -104,14 +104,29 @@ function ensureUserData() {
     fs.copyFileSync(path.join(seedResourcesDir, "dev.db"), dbPath);
   }
 
+  // Bundled music used to be copied only when the folder did not exist yet,
+  // which meant it reached fresh installs and nobody else — exactly the same
+  // shape as the migration bug: shipping a new track in an update would never
+  // arrive for anyone who already had the app. Reconciling file by file on
+  // every launch is what makes "add a song to the installer" actually deliver
+  // it to existing users too.
+  //
+  // Only files absent locally are copied. A track the user deleted themselves
+  // will come back on the next launch, which is the intended behaviour for
+  // music that ships WITH the app rather than being uploaded to it.
   const uploadsDir = path.join(userDataDir, "uploads", "music");
-  if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
-    const seedUploadsDir = path.join(seedResourcesDir, "uploads", "music");
-    if (fs.existsSync(seedUploadsDir)) {
-      for (const file of fs.readdirSync(seedUploadsDir)) {
-        fs.copyFileSync(path.join(seedUploadsDir, file), path.join(uploadsDir, file));
-      }
+  fs.mkdirSync(uploadsDir, { recursive: true });
+  const seedUploadsDir = path.join(seedResourcesDir, "uploads", "music");
+  if (fs.existsSync(seedUploadsDir)) {
+    const seeded = [];
+    for (const file of fs.readdirSync(seedUploadsDir)) {
+      const target = path.join(uploadsDir, file);
+      if (fs.existsSync(target)) continue;
+      fs.copyFileSync(path.join(seedUploadsDir, file), target);
+      seeded.push(file);
+    }
+    if (seeded.length > 0) {
+      console.log(`Copied ${seeded.length} bundled track(s) into userData: ${seeded.join(", ")}`);
     }
   }
 
