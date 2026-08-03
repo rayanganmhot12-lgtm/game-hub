@@ -53,6 +53,9 @@ export default function GameCard({
           </div>
         )}
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+        {/* An accent bloom rising from the foot of the artwork on hover, so a
+            card lights up from within rather than only darkening. */}
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_75%_at_50%_100%,rgba(var(--accent-rgb),0.38),transparent_62%)] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
         <div className="absolute left-2 top-2">
           {selectable ? (
             <span
@@ -96,7 +99,9 @@ export default function GameCard({
           </div>
         )}
       </div>
-      <div className="flex flex-1 flex-col gap-1 p-3">
+      {/* A lit plinth under the artwork rather than the same flat fill, so the
+          cover sits on the card instead of being pasted onto it. */}
+      <div className="flex flex-1 flex-col gap-1 border-t border-border/50 bg-gradient-to-b from-surface-2/60 to-surface p-3">
         <h3 className="line-clamp-2 text-sm font-medium text-foreground transition-colors group-hover:text-accent-bright">
           {game.title}
         </h3>
@@ -113,7 +118,10 @@ export default function GameCard({
     </>
   );
 
-  const sharedClassName = `card-hover group flex flex-col overflow-hidden rounded-xl border bg-surface transition-colors ${
+  // rounded-2xl to match the 1rem radius the panels moved to — cards were the
+  // only surface still on the old 0.75rem and it showed when they sat inside
+  // a panel.
+  const sharedClassName = `card-hover group flex flex-col overflow-hidden rounded-2xl border bg-surface shadow-[0_18px_36px_-24px_rgba(0,0,0,0.9)] transition-colors ${
     selectable && selected ? "border-accent ring-2 ring-accent/40" : "border-border"
   }`;
 
