@@ -3,6 +3,11 @@ import path from "path";
 
 export interface InstallSettings {
   steamApiKey?: string;
+  // Account that gets the developer panels on this machine. Nothing in the
+  // app writes it — electron/main.js reads it and passes it to the server
+  // process as ADMIN_EMAIL — but it has to be listed here so the read/write
+  // merge below preserves it instead of dropping it on the next save.
+  adminEmail?: string;
   // Store price overrides the developer account set, keyed by cosmetic id.
   // Mirrored here from the Firebase relay so the purchase route can read
   // them synchronously and stay the authority on what an item costs.
@@ -34,6 +39,7 @@ export function readInstallSettings(): InstallSettings {
     // so a field dropped on read would be erased on the next write.
     const settings: InstallSettings = {};
     if (typeof fields.steamApiKey === "string") settings.steamApiKey = fields.steamApiKey;
+    if (typeof fields.adminEmail === "string") settings.adminEmail = fields.adminEmail;
     if (typeof fields.storePrices === "object" && fields.storePrices !== null) {
       const prices: Record<string, number> = {};
       for (const [itemId, cost] of Object.entries(fields.storePrices as Record<string, unknown>)) {
