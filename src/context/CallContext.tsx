@@ -285,6 +285,22 @@ export function CallProvider({ myCode, myDisplayName, children }: { myCode: stri
         const convId = callConversationId(myCode, peerCode);
         convIdRef.current = convId;
 
+        // The room id is derived from the two friend codes, so the same
+        // Firebase path is reused for every call this pair ever makes. Only
+        // hangUp() cleared it, which means a declined call — or a closed
+        // window, a refresh, a dropped connection — left the previous offer,
+        // answer and ICE candidates sitting there.
+        //
+        // Firebase's onValue fires immediately on subscribe with whatever is
+        // already at the path, so on the next call the listeners registered
+        // below would receive that stale answer before the real one arrived
+        // and bind this connection to a finished session. The call then never
+        // completes and nothing visibly happens when the other side accepts.
+        //
+        // Clearing before anything is written or subscribed guarantees each
+        // call starts from an empty room regardless of how the last one ended.
+        await clearCallRoom(convId);
+
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: micDeviceIdRef.current ? { deviceId: { exact: micDeviceIdRef.current } } : true,
         });
@@ -387,6 +403,11 @@ export function CallProvider({ myCode, myDisplayName, children }: { myCode: stri
     if (incomingCall) {
       signalHangup(incomingCall.convId);
       clearIncomingCall(myCode);
+      // Declining left the caller's offer in the shared room. startCall now
+      // clears before dialling, so this is belt-and-braces rather than the
+      // only defence — but leaving a dead offer published is what made the
+      // next call between these two silently fail to connect.
+      clearCallRoom(incomingCall.convId);
     }
     setIncomingCall(null);
   }, [incomingCall, myCode]);
