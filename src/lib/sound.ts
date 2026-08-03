@@ -59,10 +59,25 @@ export function playPlusFanfare() {
   [660, 880, 1100, 1320, 1568].forEach((freq, i) => tone(freq, 0.22, 0.05, "sine", textAt + i * 0.09));
 }
 
-// A 5-note attention chime spanning ~5s, timed to line up with
-// AnnouncementBanner's 5s auto-dismiss countdown.
+// Two struck pairs, each a note answered a fourth above it, the second pair a
+// tone higher than the first — the shape of being called rather than notified.
+// Louder than the rest of the UI (0.1 against a click's 0.05) because this one
+// has to reach someone who isn't looking at the screen, and on a triangle wave
+// so it carries without the harshness of the square-wave warning.
+//
+// It replaces a five-note chime that spanned nearly five seconds, spaced a full
+// second apart because it was timed against the banner's old five-second
+// countdown. That countdown is gone — the banner now lasts eight seconds plus a
+// quarter per word — so the chime was pacing something that no longer existed,
+// and still playing over the message while it was being read.
 export function playAnnouncementSound() {
-  [880, 660, 880, 660, 1046].forEach((freq, i) => tone(freq, 0.35, 0.06, "sine", i * 1.0));
+  function pair(root: number, at: number) {
+    tone(root, 0.14, 0.1, "triangle", at);
+    // A fourth above, held longer, so each pair lands rather than just ticks.
+    tone(root * 4 / 3, 0.24, 0.1, "triangle", at + 0.13);
+  }
+  pair(784, 0);
+  pair(880, 0.34);
 }
 
 // Pressing mute changed a button's colour and nothing else, which is no use
