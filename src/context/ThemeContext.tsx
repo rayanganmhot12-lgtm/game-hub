@@ -2,56 +2,45 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import {
-  Theme,
-  THEME_STORAGE_KEY,
-  DEFAULT_THEME,
   CUSTOM_ACCENT_KEY,
   BG_INTENSITY_KEY,
   BG_GRID_KEY,
   BG_GRAIN_KEY,
+  DEFAULT_ACCENT,
+  DEFAULT_BG_INTENSITY,
+  DEFAULT_BG_GRID,
+  DEFAULT_BG_GRAIN,
   deriveAccentPalette,
 } from "@/lib/theme";
 
-export type { Theme };
-export { THEME_STORAGE_KEY, DEFAULT_THEME };
-
 interface ThemeContextValue {
-  theme: Theme;
-  setTheme: (theme: Theme) => void;
-  toggleTheme: () => void;
-  customAccent: string | null;
-  setCustomAccent: (hex: string | null) => void;
+  /** The active accent hex. Never null — a preset is still an accent. */
+  accent: string;
+  setAccent: (hex: string) => void;
   bgIntensity: number;
   setBgIntensity: (value: number) => void;
   bgGrid: boolean;
   setBgGrid: (value: boolean) => void;
   bgGrain: boolean;
   setBgGrain: (value: boolean) => void;
+  /** Accent and background together, back to how the app shipped. */
+  resetAll: () => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-function applyTheme(theme: Theme) {
-  document.documentElement.setAttribute("data-theme", theme);
-  window.localStorage.setItem(THEME_STORAGE_KEY, theme);
-}
-
-function applyCustomAccent(hex: string | null) {
+// One path for every accent, whether it came from a preset tile or the colour
+// picker. There used to be a second one — a data-theme attribute with a CSS
+// block overriding these same four variables — which meant a "theme" and a
+// "custom colour" were the same act performed two different ways.
+function applyAccent(hex: string) {
   const root = document.documentElement.style;
-  if (hex) {
-    const palette = deriveAccentPalette(hex);
-    root.setProperty("--accent", palette.accent);
-    root.setProperty("--accent-bright", palette.accentBright);
-    root.setProperty("--accent-dim", palette.accentDim);
-    root.setProperty("--accent-rgb", palette.accentRgb);
-    window.localStorage.setItem(CUSTOM_ACCENT_KEY, hex);
-  } else {
-    root.removeProperty("--accent");
-    root.removeProperty("--accent-bright");
-    root.removeProperty("--accent-dim");
-    root.removeProperty("--accent-rgb");
-    window.localStorage.removeItem(CUSTOM_ACCENT_KEY);
-  }
+  const palette = deriveAccentPalette(hex);
+  root.setProperty("--accent", palette.accent);
+  root.setProperty("--accent-bright", palette.accentBright);
+  root.setProperty("--accent-dim", palette.accentDim);
+  root.setProperty("--accent-rgb", palette.accentRgb);
+  window.localStorage.setItem(CUSTOM_ACCENT_KEY, hex);
 }
 
 function applyBgIntensity(value: number) {
@@ -70,54 +59,36 @@ function applyBgGrain(value: boolean) {
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>(DEFAULT_THEME);
-  const [customAccent, setCustomAccentState] = useState<string | null>(null);
-  const [bgIntensity, setBgIntensityState] = useState(1);
-  const [bgGrid, setBgGridState] = useState(true);
-  const [bgGrain, setBgGrainState] = useState(true);
+  const [accent, setAccentState] = useState(DEFAULT_ACCENT);
+  const [bgIntensity, setBgIntensityState] = useState(DEFAULT_BG_INTENSITY);
+  const [bgGrid, setBgGridState] = useState(DEFAULT_BG_GRID);
+  const [bgGrain, setBgGrainState] = useState(DEFAULT_BG_GRAIN);
 
+  // Syncs React state with what the blocking script in layout.tsx already put
+  // on the document before hydration. It reads storage itself so the first
+  // paint is already correct; this only catches state up to it.
   useEffect(() => {
-    // Syncs React state with the data-theme attribute already set by the
-    // blocking inline script in layout.tsx (which reads localStorage before
-    // hydration to avoid a flash of the wrong theme).
-    const current = document.documentElement.getAttribute("data-theme") as Theme | null;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setThemeState(current ?? DEFAULT_THEME);
-
     const storedAccent = window.localStorage.getItem(CUSTOM_ACCENT_KEY);
-    if (storedAccent) {
-      applyCustomAccent(storedAccent);
-      setCustomAccentState(storedAccent);
-    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (storedAccent) setAccentState(storedAccent);
 
     const storedIntensity = window.localStorage.getItem(BG_INTENSITY_KEY);
-    const intensity = storedIntensity ? Number(storedIntensity) : 1;
+    const intensity = storedIntensity ? Number(storedIntensity) : DEFAULT_BG_INTENSITY;
     applyBgIntensity(intensity);
     setBgIntensityState(intensity);
 
-    const storedGrid = window.localStorage.getItem(BG_GRID_KEY);
-    const grid = storedGrid !== "0";
+    const grid = window.localStorage.getItem(BG_GRID_KEY) !== "0";
     applyBgGrid(grid);
     setBgGridState(grid);
 
-    const storedGrain = window.localStorage.getItem(BG_GRAIN_KEY);
-    const grain = storedGrain !== "0";
+    const grain = window.localStorage.getItem(BG_GRAIN_KEY) !== "0";
     applyBgGrain(grain);
     setBgGrainState(grain);
   }, []);
 
-  function setTheme(next: Theme) {
-    setThemeState(next);
-    applyTheme(next);
-  }
-
-  function toggleTheme() {
-    setTheme(theme === "neon-orange" ? "dark-red" : "neon-orange");
-  }
-
-  function setCustomAccent(hex: string | null) {
-    setCustomAccentState(hex);
-    applyCustomAccent(hex);
+  function setAccent(hex: string) {
+    setAccentState(hex);
+    applyAccent(hex);
   }
 
   function setBgIntensity(value: number) {
@@ -135,20 +106,25 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     applyBgGrain(value);
   }
 
+  function resetAll() {
+    setAccent(DEFAULT_ACCENT);
+    setBgIntensity(DEFAULT_BG_INTENSITY);
+    setBgGrid(DEFAULT_BG_GRID);
+    setBgGrain(DEFAULT_BG_GRAIN);
+  }
+
   return (
     <ThemeContext.Provider
       value={{
-        theme,
-        setTheme,
-        toggleTheme,
-        customAccent,
-        setCustomAccent,
+        accent,
+        setAccent,
         bgIntensity,
         setBgIntensity,
         bgGrid,
         setBgGrid,
         bgGrain,
         setBgGrain,
+        resetAll,
       }}
     >
       {children}

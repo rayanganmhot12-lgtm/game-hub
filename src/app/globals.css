@@ -21,12 +21,9 @@
   --platform-gog: #a855f7;
 }
 
-:root[data-theme="dark-red"] {
-  --accent: #ff1f2d;
-  --accent-bright: #ff4b56;
-  --accent-dim: #8a0f17;
-  --accent-rgb: 255, 31, 45;
-}
+/* The dark-red theme lived here, overriding exactly the four accent variables
+   above — which is all a custom accent ever did. It is a named preset in
+   lib/theme.ts now, applied through the same path as every other colour. */
 
 @theme inline {
   --color-background: var(--background);

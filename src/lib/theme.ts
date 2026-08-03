@@ -1,12 +1,44 @@
-export type Theme = "neon-orange" | "dark-red";
+// There used to be a `Theme` here — a data-theme attribute with a matching
+// block in globals.css — but that block overrode exactly the four variables
+// below, which is precisely what an accent does. A theme was a named colour and
+// nothing else, so the two are one thing now: presets and custom values that
+// all take the same path.
+export interface AccentPreset {
+  name: string;
+  hex: string;
+}
 
-export const THEME_STORAGE_KEY = "gamehub-theme";
-export const DEFAULT_THEME: Theme = "neon-orange";
+// The first two were the accents of the old "neon-orange" and "dark-red"
+// themes. They were already in this list as unnamed swatches, which is the
+// plainest evidence the two systems were duplicates.
+export const ACCENT_PRESETS: AccentPreset[] = [
+  { name: "Neon Orange", hex: "#ff6b00" },
+  { name: "Dark Red", hex: "#ff1f2d" },
+  { name: "Violet", hex: "#a855f7" },
+  { name: "Teal", hex: "#14b8a6" },
+  { name: "Azure", hex: "#3b82f6" },
+  { name: "Rose", hex: "#ec4899" },
+];
+
+export const DEFAULT_ACCENT = ACCENT_PRESETS[0].hex;
 
 export const CUSTOM_ACCENT_KEY = "gamehub-custom-accent";
 export const BG_INTENSITY_KEY = "gamehub-bg-intensity";
 export const BG_GRID_KEY = "gamehub-bg-grid";
 export const BG_GRAIN_KEY = "gamehub-bg-grain";
+
+// Named so reset has one definition of "back to how it shipped" instead of the
+// same literals repeated at each call site.
+export const DEFAULT_BG_INTENSITY = 1;
+export const DEFAULT_BG_GRID = true;
+export const DEFAULT_BG_GRAIN = true;
+export const MAX_BG_INTENSITY = 2;
+
+// Six digits only. The three-digit shorthand would have to be expanded before
+// hexToRgb could read it, and a picker never produces one.
+export function isValidHex(value: string): boolean {
+  return /^#[0-9a-fA-F]{6}$/.test(value);
+}
 
 function hexToRgb(hex: string): [number, number, number] {
   const clean = hex.replace("#", "");
