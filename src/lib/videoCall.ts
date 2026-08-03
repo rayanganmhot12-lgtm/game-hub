@@ -6,6 +6,9 @@
 // friend calls) — this file only knows WebRTC mechanics, not Firebase
 // signaling paths, which the two callers still own separately.
 
+import { getDesktopBridge } from "@/lib/desktopBridge";
+import { pickScreenShareSource } from "@/lib/screenSharePicker";
+
 export async function acquireCameraTrack(): Promise<MediaStreamTrack> {
   let stream: MediaStream;
   try {
@@ -32,17 +35,38 @@ export async function acquireScreenTrack(): Promise<MediaStreamTrack> {
   if (!navigator.mediaDevices?.getDisplayMedia) {
     throw new Error("Screen sharing isn't available here.");
   }
+
+  // In the desktop app the choice has to be made before the capture, not
+  // during it. Electron has no picker of its own on Windows and rejects
+  // getDisplayMedia outright unless the main process answers with a source, so
+  // we show our own picker first and arm the request with the result. It also
+  // keeps cancelling clean: refusing the request after the fact reaches us as
+  // AbortError, which is indistinguishable from a real failure, whereas
+  // closing our picker never calls getDisplayMedia at all.
+  const desktop = getDesktopBridge();
+  if (desktop) {
+    const sources = await desktop.listScreenShareSources();
+    const chosen = await pickScreenShareSource(sources);
+    if (!chosen) throw new ScreenShareCancelledError();
+    await desktop.selectScreenShareSource(chosen.id);
+  }
+
   let stream: MediaStream;
   try {
     stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
   } catch (err) {
-    // Dismissing the picker rejects with NotAllowedError. That's an ordinary
-    // "changed my mind", not a fault worth showing an error toast for, so it
-    // gets its own type for callers to swallow.
+    // In a browser, dismissing Chrome's own picker rejects with
+    // NotAllowedError. That's an ordinary "changed my mind", not a fault worth
+    // showing an error toast for, so it gets its own type for callers to
+    // swallow.
     if (err instanceof DOMException && err.name === "NotAllowedError") {
       throw new ScreenShareCancelledError();
     }
-    throw new Error("Couldn't start screen sharing.");
+    // Name the cause. This threw a bare sentence once, and a missing Electron
+    // handler — NotSupportedError on every single press — looked exactly like
+    // any other failure, which is what made it hard to place.
+    const cause = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+    throw new Error(`Couldn't start screen sharing (${cause}).`, { cause: err });
   }
   const track = stream.getVideoTracks()[0];
   if (!track) {

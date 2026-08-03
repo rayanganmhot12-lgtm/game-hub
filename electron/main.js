@@ -6,6 +6,7 @@ const crypto = require("crypto");
 const { spawn, execFileSync } = require("child_process");
 const { autoUpdater } = require("electron-updater");
 const { applyPendingMigrations, seedBundledTracks } = require("./migrate");
+const { registerScreenSharing } = require("./screenShare");
 
 require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
 
@@ -232,6 +233,7 @@ function createWindow() {
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
+      preload: path.join(__dirname, "preload.js"),
     },
   });
 
@@ -479,6 +481,8 @@ app.whenReady().then(async () => {
     app.quit();
     return;
   }
+  // Before the window, so a request can never arrive ahead of its handler.
+  registerScreenSharing(session.defaultSession);
   createWindow();
   createTray();
   setupDiscordPresence();

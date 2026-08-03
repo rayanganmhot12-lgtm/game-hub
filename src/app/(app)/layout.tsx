@@ -15,6 +15,7 @@ import WarningOverlay from "@/components/WarningOverlay";
 import AnnouncementBanner from "@/components/AnnouncementBanner";
 import CallWindow from "@/components/CallWindow";
 import IncomingCallBanner from "@/components/IncomingCallBanner";
+import ScreenSharePicker from "@/components/ScreenSharePicker";
 import PointsGiftListener from "@/components/PointsGiftListener";
 import PointsWithdrawalListener from "@/components/PointsWithdrawalListener";
 import CosmeticGiftListener from "@/components/CosmeticGiftListener";
@@ -76,6 +77,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <GroupMessageNotifier servers={servers} myCode={myFriendCode} />
           <IncomingCallBanner />
           <CallWindow />
+          <ScreenSharePicker />
           <div className="flex min-h-screen flex-col">
             <Navbar points={user.points} />
             <div className="flex flex-1">
