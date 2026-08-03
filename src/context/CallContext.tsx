@@ -20,7 +20,14 @@ import {
 } from "@/lib/webrtc";
 import { getModerationState, isRestricted } from "@/lib/moderationRealtime";
 import { isFirebaseConfigured } from "@/lib/firebase";
-import { acquireCameraTrack, addVideoTrackAndRenegotiate, isNewRemoteOffer } from "@/lib/videoCall";
+import {
+  acquireCameraTrack,
+  acquireScreenTrack,
+  addVideoTrackAndRenegotiate,
+  isNewRemoteOffer,
+  ScreenShareCancelledError,
+} from "@/lib/videoCall";
+import { acquireMicTrack, listMicrophones, type MicrophoneOption } from "@/lib/audioDevices";
 import { isGroupCallActive, markDirectCallActive } from "@/lib/callActivity";
 
 type CallStatus = "ringing-out" | "ringing-in" | "connecting" | "connected";
@@ -47,6 +54,9 @@ interface CallContextValue {
   activeCall: ActiveCall | null;
   muted: boolean;
   cameraOn: boolean;
+  screenSharing: boolean;
+  microphones: MicrophoneOption[];
+  micDeviceId: string | null;
   localStream: MediaStream | null;
   remoteStream: MediaStream | null;
   startCall: (peerCode: string, peerDisplayName: string) => Promise<void>;
@@ -55,6 +65,9 @@ interface CallContextValue {
   hangUp: () => void;
   toggleMuted: () => void;
   toggleCamera: () => Promise<void>;
+  toggleScreenShare: () => Promise<void>;
+  selectMicrophone: (deviceId: string) => Promise<void>;
+  refreshMicrophones: () => Promise<void>;
 }
 
 const CallContext = createContext<CallContextValue | null>(null);
@@ -64,15 +77,35 @@ export function CallProvider({ myCode, myDisplayName, children }: { myCode: stri
   const [activeCall, setActiveCall] = useState<ActiveCall | null>(null);
   const [muted, setMuted] = useState(false);
   const [cameraOn, setCameraOn] = useState(false);
+  const [screenSharing, setScreenSharing] = useState(false);
+  const [microphones, setMicrophones] = useState<MicrophoneOption[]>([]);
+  const [micDeviceId, setMicDeviceId] = useState<string | null>(null);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
 
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const videoSenderRef = useRef<RTCRtpSender | null>(null);
+  // The screen track ends whenever the user stops sharing from the browser's
+  // own bar, so its listener has to be removable when we stop it ourselves.
+  const screenTrackRef = useRef<MediaStreamTrack | null>(null);
   const cleanupFnsRef = useRef<Array<() => void>>([]);
   const convIdRef = useRef<string | null>(null);
   const activeCallRef = useRef<ActiveCall | null>(null);
+  // Mirrors `muted` so switching microphones can carry the mute state onto the
+  // replacement track without making selectMicrophone depend on it.
+  const mutedRef = useRef(false);
+  // Read when a call starts, so a mic chosen before or during a previous call
+  // is the one that opens on the next one instead of the system default.
+  const micDeviceIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    mutedRef.current = muted;
+  }, [muted]);
+
+  useEffect(() => {
+    micDeviceIdRef.current = micDeviceId;
+  }, [micDeviceId]);
 
   useEffect(() => {
     activeCallRef.current = activeCall;
@@ -252,7 +285,9 @@ export function CallProvider({ myCode, myDisplayName, children }: { myCode: stri
         const convId = callConversationId(myCode, peerCode);
         convIdRef.current = convId;
 
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: micDeviceIdRef.current ? { deviceId: { exact: micDeviceIdRef.current } } : true,
+        });
         localStreamRef.current = stream;
         setLocalStream(stream);
 
@@ -312,7 +347,9 @@ export function CallProvider({ myCode, myDisplayName, children }: { myCode: stri
       setIncomingCall(null);
       await clearIncomingCall(myCode);
 
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+          audio: micDeviceIdRef.current ? { deviceId: { exact: micDeviceIdRef.current } } : true,
+        });
       localStreamRef.current = stream;
       setLocalStream(stream);
 
@@ -362,7 +399,126 @@ export function CallProvider({ myCode, myDisplayName, children }: { myCode: stri
     });
   }, []);
 
+  const refreshMicrophones = useCallback(async () => {
+    setMicrophones(await listMicrophones());
+  }, []);
+
+  // Swapping the live audio track through the existing sender, rather than
+  // rebuilding the stream, is what makes this safe mid-call: the sender and
+  // its m-line are untouched, so there is nothing to renegotiate and the
+  // remote side hears the new mic without a blip.
+  const selectMicrophone = useCallback(
+    async (deviceId: string) => {
+      const pc = pcRef.current;
+      const stream = localStreamRef.current;
+      if (!pc || !stream) {
+        // Not in a call — remember the choice for the next one.
+        setMicDeviceId(deviceId);
+        return;
+      }
+      const track = await acquireMicTrack(deviceId);
+      // Carry the current mute state over, or switching mics would silently
+      // un-mute someone who is muted.
+      track.enabled = !mutedRef.current;
+      const sender = pc.getSenders().find((s) => s.track?.kind === "audio");
+      if (sender) {
+        await sender.replaceTrack(track);
+      }
+      stream.getAudioTracks().forEach((old) => {
+        old.stop();
+        stream.removeTrack(old);
+      });
+      stream.addTrack(track);
+      setLocalStream(stream);
+      setMicDeviceId(deviceId);
+    },
+    []
+  );
+
+  const stopScreenTrack = useCallback(() => {
+    const track = screenTrackRef.current;
+    if (!track) return;
+    track.onended = null;
+    track.stop();
+    localStreamRef.current?.removeTrack(track);
+    screenTrackRef.current = null;
+  }, []);
+
+  const toggleScreenShare = useCallback(async () => {
+    if (screenSharing) {
+      stopScreenTrack();
+      if (videoSenderRef.current) await videoSenderRef.current.replaceTrack(null).catch(() => {});
+      setScreenSharing(false);
+      setLocalStream(localStreamRef.current);
+      return;
+    }
+
+    const pc = pcRef.current;
+    const stream = localStreamRef.current;
+    if (!pc || !stream) return; // not in a call
+
+    let track: MediaStreamTrack;
+    try {
+      track = await acquireScreenTrack();
+    } catch (err) {
+      // Dismissing the OS picker is a decision, not a failure.
+      if (err instanceof ScreenShareCancelledError) return;
+      throw err;
+    }
+
+    // Camera and screen share the one video sender, so starting a share ends
+    // the camera rather than opening a second video m-line.
+    if (cameraOn) {
+      stream.getVideoTracks().forEach((t) => {
+        if (t === track) return;
+        t.stop();
+        stream.removeTrack(t);
+      });
+      setCameraOn(false);
+    }
+
+    // Whatever the browser's own "Stop sharing" button does has to be
+    // reflected back here, or the button keeps claiming you're sharing.
+    track.onended = () => {
+      screenTrackRef.current = null;
+      videoSenderRef.current?.replaceTrack(null).catch(() => {});
+      localStreamRef.current?.removeTrack(track);
+      setScreenSharing(false);
+      setLocalStream(localStreamRef.current);
+    };
+    screenTrackRef.current = track;
+
+    try {
+      stream.addTrack(track);
+      setLocalStream(stream);
+      if (videoSenderRef.current) {
+        await videoSenderRef.current.replaceTrack(track);
+      } else {
+        const convId = convIdRef.current;
+        const sendOfferFn = (offer: RTCSessionDescriptionInit) => {
+          if (!convId) return Promise.resolve();
+          return sendOffer(convId, myCode, offer);
+        };
+        videoSenderRef.current = await addVideoTrackAndRenegotiate(pc, stream, track, sendOfferFn);
+      }
+      setScreenSharing(true);
+    } catch (err) {
+      // Same rollback reasoning as the camera: one peer, so a failed
+      // renegotiation leaves nothing worth keeping, and an orphaned track
+      // would keep the "sharing your screen" indicator up.
+      const orphanSender = pc.getSenders().find((s) => s.track === track);
+      stopScreenTrack();
+      if (orphanSender && pc.signalingState !== "closed") pc.removeTrack(orphanSender);
+      throw err;
+    }
+  }, [screenSharing, cameraOn, myCode, stopScreenTrack]);
+
   const toggleCamera = useCallback(async () => {
+    // Both ride the single video sender, so the camera takes it back.
+    if (!cameraOn && screenSharing) {
+      stopScreenTrack();
+      setScreenSharing(false);
+    }
     if (cameraOn) {
       // Genuinely stop the track (turns the OS camera light off) and clear
       // the sender via replaceTrack(null) — no renegotiation needed.
@@ -423,11 +579,30 @@ export function CallProvider({ myCode, myDisplayName, children }: { myCode: stri
       // now-trackless local tile back to the avatar.
       throw err;
     }
-  }, [cameraOn, myCode]);
+  }, [cameraOn, screenSharing, myCode, stopScreenTrack]);
 
   return (
     <CallContext.Provider
-      value={{ incomingCall, activeCall, muted, cameraOn, localStream, remoteStream, startCall, acceptCall, declineCall, hangUp, toggleMuted, toggleCamera }}
+      value={{
+        incomingCall,
+        activeCall,
+        muted,
+        cameraOn,
+        screenSharing,
+        microphones,
+        micDeviceId,
+        localStream,
+        remoteStream,
+        startCall,
+        acceptCall,
+        declineCall,
+        hangUp,
+        toggleMuted,
+        toggleCamera,
+        toggleScreenShare,
+        selectMicrophone,
+        refreshMicrophones,
+      }}
     >
       {children}
     </CallContext.Provider>

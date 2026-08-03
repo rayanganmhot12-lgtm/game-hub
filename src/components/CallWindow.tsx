@@ -1,8 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { PhoneOff, Mic, MicOff, Video, VideoOff, Maximize2, Minimize2 } from "lucide-react";
+import {
+  PhoneOff,
+  Mic,
+  MicOff,
+  Video,
+  VideoOff,
+  Maximize2,
+  Minimize2,
+  MonitorUp,
+  MonitorOff,
+  ChevronDown,
+  Check,
+} from "lucide-react";
 import { useGroupCall } from "@/context/GroupCallContext";
 import { useCall } from "@/context/CallContext";
 import { useToast } from "@/context/ToastContext";
@@ -126,6 +138,20 @@ export default function CallWindow() {
   const { showToast } = useToast();
   const [expanded, setExpanded] = useState(false);
   const [togglingCamera, setTogglingCamera] = useState(false);
+  const [togglingScreen, setTogglingScreen] = useState(false);
+  const [micMenuOpen, setMicMenuOpen] = useState(false);
+  const micMenuRef = useRef<HTMLDivElement | null>(null);
+
+  // Dismiss the device list on any click outside it, the way every other
+  // popover in this app behaves.
+  useEffect(() => {
+    if (!micMenuOpen) return;
+    const onPointerDown = (e: PointerEvent) => {
+      if (!micMenuRef.current?.contains(e.target as Node)) setMicMenuOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [micMenuOpen]);
 
   const inGroupCall = Boolean(group.activeGroupCall);
   // Ringing states (outgoing/incoming, not yet connected) are intentionally
@@ -140,6 +166,9 @@ export default function CallWindow() {
   const title = isGroup ? group.activeGroupCall!.groupName : direct.activeCall!.peerDisplayName;
   const muted = isGroup ? group.muted : direct.muted;
   const cameraOn = isGroup ? group.cameraOn : direct.cameraOn;
+  const screenSharing = isGroup ? group.screenSharing : direct.screenSharing;
+  const microphones = isGroup ? group.microphones : direct.microphones;
+  const micDeviceId = isGroup ? group.micDeviceId : direct.micDeviceId;
   const localStream = isGroup ? group.localStream : direct.localStream;
 
   const tiles: Tile[] = isGroup
@@ -157,6 +186,44 @@ export default function CallWindow() {
       showToast(err instanceof Error ? err.message : "Couldn't toggle camera.", "error");
     } finally {
       setTogglingCamera(false);
+    }
+  }
+
+  async function handleToggleScreen() {
+    setTogglingScreen(true);
+    try {
+      if (isGroup) await group.toggleScreenShare();
+      else await direct.toggleScreenShare();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Couldn't share your screen.", "error");
+    } finally {
+      setTogglingScreen(false);
+    }
+  }
+
+  // Device labels stay blank until the page has been granted mic permission,
+  // so the list is only worth reading once a call is running — which is
+  // exactly when this opens.
+  async function handleOpenMicMenu() {
+    const next = !micMenuOpen;
+    setMicMenuOpen(next);
+    if (!next) return;
+    try {
+      if (isGroup) await group.refreshMicrophones();
+      else await direct.refreshMicrophones();
+    } catch {
+      // An unreadable device list is not worth interrupting a call over.
+    }
+  }
+
+  async function handleSelectMic(deviceId: string) {
+    setMicMenuOpen(false);
+    try {
+      if (isGroup) await group.selectMicrophone(deviceId);
+      else await direct.selectMicrophone(deviceId);
+      showToast("Microphone switched.", "success");
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Couldn't switch microphone.", "error");
     }
   }
 
@@ -195,26 +262,85 @@ export default function CallWindow() {
           ))}
         </div>
 
-        <div className="flex items-center justify-center gap-2">
-          <button
-            onClick={handleToggleMuted}
-            title={muted ? "Unmute" : "Mute"}
-            className={`rounded-full p-2.5 transition-transform duration-100 active:scale-90 ${muted ? "bg-surface-2 text-foreground" : "text-muted hover:text-foreground"}`}
-          >
-            {muted ? <MicOff size={16} /> : <Mic size={16} />}
-          </button>
+        {/* A control dock rather than three bare icons: an active control now
+            reads as lit rather than merely a slightly lighter circle, and
+            leaving is set apart from the toggles so it can't be mis-hit. */}
+        <div className="flex items-center justify-center gap-1.5 rounded-2xl border border-border/60 bg-surface-2/40 p-1.5">
+          <div className="relative flex items-center" ref={micMenuRef}>
+            <button
+              onClick={handleToggleMuted}
+              title={muted ? "Unmute" : "Mute"}
+              className={`rounded-l-xl px-3 py-2.5 transition-colors duration-150 active:scale-95 ${
+                muted
+                  ? "bg-red-500/20 text-red-300"
+                  : "bg-surface-2/80 text-foreground hover:bg-surface-2"
+              }`}
+            >
+              {muted ? <MicOff size={16} /> : <Mic size={16} />}
+            </button>
+            <button
+              onClick={handleOpenMicMenu}
+              title="Choose microphone"
+              className="rounded-r-xl border-l border-border/60 bg-surface-2/80 px-1.5 py-2.5 text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+            >
+              <ChevronDown size={13} />
+            </button>
+
+            {micMenuOpen && (
+              <div className="panel absolute bottom-full left-0 z-10 mb-2 max-h-56 w-60 overflow-y-auto p-1.5">
+                <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted">
+                  Microphone
+                </p>
+                {microphones.length === 0 ? (
+                  <p className="px-2 py-2 text-xs text-muted">No microphones found.</p>
+                ) : (
+                  microphones.map((mic) => (
+                    <button
+                      key={mic.deviceId}
+                      onClick={() => handleSelectMic(mic.deviceId)}
+                      className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+                    >
+                      <span className="w-3.5 shrink-0 text-accent-bright">
+                        {mic.deviceId === micDeviceId && <Check size={13} />}
+                      </span>
+                      <span className="truncate">{mic.label}</span>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+
           <button
             onClick={handleToggleCamera}
             disabled={togglingCamera}
             title={cameraOn ? "Turn camera off" : "Turn camera on"}
-            className={`rounded-full p-2.5 transition-transform duration-100 active:scale-90 disabled:opacity-50 ${cameraOn ? "bg-surface-2 text-foreground" : "text-muted hover:text-foreground"}`}
+            className={`rounded-xl px-3 py-2.5 transition-colors duration-150 active:scale-95 disabled:opacity-50 ${
+              cameraOn
+                ? "bg-accent/20 text-accent-bright shadow-[0_0_16px_-6px_rgba(var(--accent-rgb),0.9)]"
+                : "bg-surface-2/80 text-muted hover:bg-surface-2 hover:text-foreground"
+            }`}
           >
             {cameraOn ? <Video size={16} /> : <VideoOff size={16} />}
           </button>
+
+          <button
+            onClick={handleToggleScreen}
+            disabled={togglingScreen}
+            title={screenSharing ? "Stop sharing your screen" : "Share your screen"}
+            className={`rounded-xl px-3 py-2.5 transition-colors duration-150 active:scale-95 disabled:opacity-50 ${
+              screenSharing
+                ? "bg-emerald-500/20 text-emerald-300 shadow-[0_0_16px_-6px_rgba(52,211,153,0.9)]"
+                : "bg-surface-2/80 text-muted hover:bg-surface-2 hover:text-foreground"
+            }`}
+          >
+            {screenSharing ? <MonitorOff size={16} /> : <MonitorUp size={16} />}
+          </button>
+
           <button
             onClick={handleLeave}
             title="Leave"
-            className="rounded-full bg-red-500/15 p-2.5 text-red-400 transition-transform duration-100 hover:bg-red-500/25 active:scale-90"
+            className="ml-1 rounded-xl bg-red-500/20 px-3.5 py-2.5 text-red-300 transition-colors duration-150 hover:bg-red-500/30 active:scale-95"
           >
             <PhoneOff size={16} />
           </button>

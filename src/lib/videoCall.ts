@@ -20,6 +20,44 @@ export async function acquireCameraTrack(): Promise<MediaStreamTrack> {
   return track;
 }
 
+// Screen capture produces a video track like the camera does, so it rides the
+// same sender and the same renegotiation path below — the two are deliberately
+// mutually exclusive rather than opening a second video m-line.
+//
+// The returned track can end without the app touching it: every browser puts
+// its own "Stop sharing" affordance on screen. Callers must listen for
+// `ended` and reconcile their state, or the UI keeps claiming the screen is
+// being shared after it has stopped.
+export async function acquireScreenTrack(): Promise<MediaStreamTrack> {
+  if (!navigator.mediaDevices?.getDisplayMedia) {
+    throw new Error("Screen sharing isn't available here.");
+  }
+  let stream: MediaStream;
+  try {
+    stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+  } catch (err) {
+    // Dismissing the picker rejects with NotAllowedError. That's an ordinary
+    // "changed my mind", not a fault worth showing an error toast for, so it
+    // gets its own type for callers to swallow.
+    if (err instanceof DOMException && err.name === "NotAllowedError") {
+      throw new ScreenShareCancelledError();
+    }
+    throw new Error("Couldn't start screen sharing.");
+  }
+  const track = stream.getVideoTracks()[0];
+  if (!track) {
+    throw new Error("No screen track was available.");
+  }
+  return track;
+}
+
+export class ScreenShareCancelledError extends Error {
+  constructor() {
+    super("Screen share cancelled");
+    this.name = "ScreenShareCancelledError";
+  }
+}
+
 // Only ever called once per peer connection — the FIRST time the local
 // user turns their camera on. Every toggle after that (on this same peer
 // connection) uses the RTCRtpSender this returns with replaceTrack()

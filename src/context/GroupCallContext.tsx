@@ -19,7 +19,14 @@ import {
 } from "@/lib/groupCallRealtime";
 import { getModerationState, isRestricted } from "@/lib/moderationRealtime";
 import { isFirebaseConfigured } from "@/lib/firebase";
-import { acquireCameraTrack, addVideoTrackAndRenegotiate, isNewRemoteOffer } from "@/lib/videoCall";
+import {
+  acquireCameraTrack,
+  acquireScreenTrack,
+  addVideoTrackAndRenegotiate,
+  isNewRemoteOffer,
+  ScreenShareCancelledError,
+} from "@/lib/videoCall";
+import { acquireMicTrack, listMicrophones, type MicrophoneOption } from "@/lib/audioDevices";
 import { isDirectCallActive, markGroupCallActive } from "@/lib/callActivity";
 
 // The mirror of CallContext's guard: CallWindow renders one call mode and
@@ -45,12 +52,18 @@ interface GroupCallContextValue {
   muted: boolean;
   deafened: boolean;
   cameraOn: boolean;
+  screenSharing: boolean;
+  microphones: MicrophoneOption[];
+  micDeviceId: string | null;
   localStream: MediaStream | null;
   joinGroupCall: (groupId: string, groupName: string) => Promise<void>;
   leaveGroupCall: () => void;
   toggleMuted: () => void;
   toggleDeafen: () => void;
   toggleCamera: () => Promise<void>;
+  toggleScreenShare: () => Promise<void>;
+  selectMicrophone: (deviceId: string) => Promise<void>;
+  refreshMicrophones: () => Promise<void>;
   remoteStreams: Record<string, MediaStream>;
   locallyMutedPeers: Set<string>;
   toggleLocalMute: (peerCode: string) => void;
@@ -72,6 +85,9 @@ export function GroupCallProvider({
   const [muted, setMuted] = useState(false);
   const [deafened, setDeafened] = useState(false);
   const [cameraOn, setCameraOn] = useState(false);
+  const [screenSharing, setScreenSharing] = useState(false);
+  const [microphones, setMicrophones] = useState<MicrophoneOption[]>([]);
+  const [micDeviceId, setMicDeviceId] = useState<string | null>(null);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStreams, setRemoteStreams] = useState<Record<string, MediaStream>>({});
   // Purely local, per-viewer preference — muting how a peer sounds to you
@@ -84,9 +100,19 @@ export function GroupCallProvider({
   const peerCleanupRef = useRef<Map<string, Array<() => void>>>(new Map());
   const groupIdRef = useRef<string | null>(null);
   const unsubParticipantsRef = useRef<(() => void) | null>(null);
+  // The screen track can end from the browser's own "Stop sharing" bar, so its
+  // listener has to be removable when we stop it ourselves instead.
+  const screenTrackRef = useRef<MediaStreamTrack | null>(null);
   // Mirrors `muted` for use inside callbacks (joinGroupCall, toggleDeafen)
   // without recreating them on every mute toggle.
   const mutedRef = useRef(false);
+  // Read when joining, so a mic chosen earlier is the one that opens rather
+  // than the system default.
+  const micDeviceIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    micDeviceIdRef.current = micDeviceId;
+  }, [micDeviceId]);
   // What mic-mute state to restore once the user un-deafens.
   const mutedBeforeDeafenRef = useRef(false);
 
@@ -284,7 +310,9 @@ export function GroupCallProvider({
         if (restricted) throw new Error(reason);
         if (!isFirebaseConfigured) throw new Error("Voice calls aren't set up yet — see the README for Firebase setup.");
 
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: micDeviceIdRef.current ? { deviceId: { exact: micDeviceIdRef.current } } : true,
+        });
         // Carry the standing mute preference into the fresh track — otherwise
         // a pre-set mute would silently stop applying on your next call.
         stream.getAudioTracks().forEach((track) => (track.enabled = !mutedRef.current));
@@ -350,7 +378,119 @@ export function GroupCallProvider({
     });
   }, []);
 
+  const refreshMicrophones = useCallback(async () => {
+    setMicrophones(await listMicrophones());
+  }, []);
+
+  // Same reasoning as the 1:1 call: replaceTrack on each peer's existing audio
+  // sender needs no renegotiation, so a mic change is seamless for everyone in
+  // the channel. A failure with one peer must not stop the rest from getting
+  // the new track.
+  const selectMicrophone = useCallback(async (deviceId: string) => {
+    const stream = localStreamRef.current;
+    if (!stream) {
+      setMicDeviceId(deviceId);
+      return;
+    }
+    const track = await acquireMicTrack(deviceId);
+    track.enabled = !mutedRef.current;
+    for (const pc of peerConnectionsRef.current.values()) {
+      const sender = pc.getSenders().find((s) => s.track?.kind === "audio");
+      if (sender) await sender.replaceTrack(track).catch(() => {});
+    }
+    stream.getAudioTracks().forEach((old) => {
+      old.stop();
+      stream.removeTrack(old);
+    });
+    stream.addTrack(track);
+    setLocalStream(stream);
+    setMicDeviceId(deviceId);
+  }, []);
+
+  const stopScreenTrack = useCallback(() => {
+    const track = screenTrackRef.current;
+    if (!track) return;
+    track.onended = null;
+    track.stop();
+    localStreamRef.current?.removeTrack(track);
+    screenTrackRef.current = null;
+  }, []);
+
+  const toggleScreenShare = useCallback(async () => {
+    if (screenSharing) {
+      stopScreenTrack();
+      for (const sender of videoSendersRef.current.values()) {
+        await sender.replaceTrack(null).catch(() => {});
+      }
+      setScreenSharing(false);
+      setLocalStream(localStreamRef.current);
+      return;
+    }
+
+    const stream = localStreamRef.current;
+    if (!stream) return; // not in a channel
+
+    let track: MediaStreamTrack;
+    try {
+      track = await acquireScreenTrack();
+    } catch (err) {
+      if (err instanceof ScreenShareCancelledError) return;
+      throw err;
+    }
+
+    // One video sender per peer, shared with the camera — starting a share
+    // ends the camera rather than opening a second video m-line.
+    if (cameraOn) {
+      stream.getVideoTracks().forEach((t) => {
+        if (t === track) return;
+        t.stop();
+        stream.removeTrack(t);
+      });
+      setCameraOn(false);
+    }
+
+    track.onended = () => {
+      screenTrackRef.current = null;
+      for (const sender of videoSendersRef.current.values()) {
+        sender.replaceTrack(null).catch(() => {});
+      }
+      localStreamRef.current?.removeTrack(track);
+      setScreenSharing(false);
+      setLocalStream(localStreamRef.current);
+    };
+    screenTrackRef.current = track;
+
+    stream.addTrack(track);
+    setLocalStream(stream);
+
+    for (const [peerCode, pc] of peerConnectionsRef.current.entries()) {
+      try {
+        const existing = videoSendersRef.current.get(peerCode);
+        if (existing) {
+          await existing.replaceTrack(track);
+        } else {
+          const sendOffer = (offer: RTCSessionDescriptionInit) => {
+            const groupId = groupIdRef.current;
+            if (!groupId) return Promise.resolve();
+            return sendGroupCallOffer(groupId, myCode, peerCode, offer);
+          };
+          const sender = await addVideoTrackAndRenegotiate(pc, stream, track, sendOffer);
+          videoSendersRef.current.set(peerCode, sender);
+        }
+      } catch {
+        // Deliberately swallowed, matching toggleCamera: one flaky peer must
+        // not stop everyone else in the channel from seeing the screen.
+      }
+    }
+    setScreenSharing(true);
+  }, [screenSharing, cameraOn, myCode, stopScreenTrack]);
+
   const toggleCamera = useCallback(async () => {
+    // Camera and screen share the same sender, so the camera takes it back.
+    if (!cameraOn && screenSharing) {
+      stopScreenTrack();
+      setScreenSharing(false);
+    }
     if (cameraOn) {
       // Genuinely stop the track (turns the OS camera light off) and clear
       // every peer's sender via replaceTrack(null) — no renegotiation.
@@ -403,7 +543,7 @@ export function GroupCallProvider({
       }
     }
     setCameraOn(true);
-  }, [cameraOn, myCode]);
+  }, [cameraOn, screenSharing, myCode, stopScreenTrack]);
 
   const toggleLocalMute = useCallback((peerCode: string) => {
     setLocallyMutedPeers((prev) => {
@@ -422,12 +562,18 @@ export function GroupCallProvider({
         muted,
         deafened,
         cameraOn,
+        screenSharing,
+        microphones,
+        micDeviceId,
         localStream,
         joinGroupCall,
         leaveGroupCall,
         toggleMuted,
         toggleDeafen,
         toggleCamera,
+        toggleScreenShare,
+        selectMicrophone,
+        refreshMicrophones,
         remoteStreams,
         locallyMutedPeers,
         toggleLocalMute,
