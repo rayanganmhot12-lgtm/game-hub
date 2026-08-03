@@ -6,7 +6,16 @@ import { useToast } from "@/context/ToastContext";
 import { isFirebaseConfigured } from "@/lib/firebase";
 import { normalizeFriendCode, formatFriendCode } from "@/lib/friendCode";
 import { setModerationState, resetModerationState, sendWarning } from "@/lib/moderationRealtime";
-import { sendAnnouncement } from "@/lib/announcementRealtime";
+import {
+  sendAnnouncement,
+  sendGlobalAnnouncement,
+  pruneOldGlobalAnnouncements,
+} from "@/lib/announcementRealtime";
+import AnnouncementCard from "@/components/AnnouncementCard";
+
+// Long enough for anything worth broadcasting, short enough that the banner
+// stays a banner.
+const ANNOUNCEMENT_MAX_LENGTH = 280;
 
 interface ModerationActionLog {
   id: string;
@@ -17,12 +26,6 @@ interface ModerationActionLog {
   createdAt: string | Date;
 }
 
-interface Friend {
-  id: string;
-  friendCode: string;
-  friendDisplayName: string;
-}
-
 const TIMEOUT_OPTIONS = [
   { label: "5 minutes", minutes: 5 },
   { label: "15 minutes", minutes: 15 },
@@ -31,13 +34,13 @@ const TIMEOUT_OPTIONS = [
 ];
 
 export default function ModerationPanel({
+  myCode,
   myDisplayName,
   initialActions,
-  friends,
 }: {
+  myCode: string;
   myDisplayName: string;
   initialActions: ModerationActionLog[];
-  friends: Friend[];
 }) {
   const { showToast } = useToast();
   const [targetCodeInput, setTargetCodeInput] = useState("");
@@ -49,25 +52,37 @@ export default function ModerationPanel({
   const [busy, setBusy] = useState(false);
   const [announceMessage, setAnnounceMessage] = useState("");
   const [announcing, setAnnouncing] = useState(false);
+  const [confirmingAnnounce, setConfirmingAnnounce] = useState(false);
 
-  async function logAction(action: string, reason?: string, expiresAt?: number) {
-    const targetCode = normalizeFriendCode(targetCodeInput);
+  async function postAction(body: {
+    action: string;
+    targetCode: string;
+    targetDisplayName: string;
+    reason?: string;
+    expiresAt?: number;
+  }) {
     const res = await fetch("/api/moderation", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action,
-        targetCode,
-        targetDisplayName: targetDisplayName || targetCode,
-        reason,
-        expiresAt,
-      }),
+      body: JSON.stringify(body),
     });
     if (!res.ok) {
       throw new Error("Couldn't save this action to the log.");
     }
     const { action: entry } = await res.json();
     setActions((prev) => [entry, ...prev]);
+  }
+
+  // Everything aimed at the person named in the Target field.
+  async function logAction(action: string, reason?: string, expiresAt?: number) {
+    const targetCode = normalizeFriendCode(targetCodeInput);
+    await postAction({
+      action,
+      targetCode,
+      targetDisplayName: targetDisplayName || targetCode,
+      reason,
+      expiresAt,
+    });
   }
 
   function getTargetCode(): string | null {
@@ -193,21 +208,32 @@ export default function ModerationPanel({
     }
   }
 
+  // One write to a channel every client reads, rather than a copy per friend.
+  // The old version looped the sender's friends list, so a button that said
+  // "Send to All" reached nobody who hadn't been added as a friend first.
   async function handleAnnounceAll() {
     const message = announceMessage.trim();
     if (!message) {
       showToast("Write an announcement message.", "error");
       return;
     }
-    if (friends.length === 0) {
-      showToast("You don't have any friends to announce to yet.", "error");
-      return;
-    }
     setAnnouncing(true);
     try {
-      await Promise.all(friends.map((f) => sendAnnouncement(f.friendCode, message, myDisplayName)));
-      showToast(`Sent to ${friends.length} friend${friends.length === 1 ? "" : "s"}.`, "success");
+      await sendGlobalAnnouncement(message, myDisplayName, myCode);
+      await postAction({
+        action: "announce",
+        targetCode: "EVERYONE",
+        targetDisplayName: "Everyone",
+        reason: message,
+      });
+      // Nobody deletes a broadcast on dismissal, so the sender is the only one
+      // who can clear what has aged out.
+      pruneOldGlobalAnnouncements().catch(() => {
+        // Housekeeping. A failure here costs some stale nodes, not the send.
+      });
+      showToast("Announcement sent to everyone.", "success");
       setAnnounceMessage("");
+      setConfirmingAnnounce(false);
     } catch (err) {
       showToast(err instanceof Error ? err.message : "Couldn't send announcement.", "error");
     } finally {
@@ -242,24 +268,60 @@ export default function ModerationPanel({
           Announce to Everyone
         </h2>
         <p className="mb-3 text-xs text-muted">
-          Sends a friendly banner (not a warning) to all {friends.length} friend{friends.length === 1 ? "" : "s"} at
-          once.
+          A friendly banner, not a warning. Goes to every install of Game Hub, whether or not they are on your
+          friends list.
         </p>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <input
-            value={announceMessage}
-            onChange={(e) => setAnnounceMessage(e.target.value)}
-            placeholder="Announcement message…"
-            className="input-field flex-1"
-          />
-          <button
-            onClick={handleAnnounceAll}
-            disabled={announcing || !isFirebaseConfigured}
-            className="btn-primary"
+
+        <textarea
+          value={announceMessage}
+          onChange={(e) => setAnnounceMessage(e.target.value.slice(0, ANNOUNCEMENT_MAX_LENGTH))}
+          placeholder="Announcement message…"
+          rows={3}
+          className="input-field w-full resize-y"
+        />
+
+        <div className="mt-1 flex items-center justify-between gap-3">
+          <span
+            className={`text-[11px] tabular-nums ${
+              announceMessage.length >= ANNOUNCEMENT_MAX_LENGTH ? "text-accent-bright" : "text-muted"
+            }`}
           >
-            Send to All
-          </button>
+            {announceMessage.length} / {ANNOUNCEMENT_MAX_LENGTH}
+          </span>
+
+          {/* Irreversible, and it reaches everyone — so the send is two
+              deliberate presses rather than one stray click. */}
+          {confirmingAnnounce ? (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted">Send to everyone?</span>
+              <button onClick={() => setConfirmingAnnounce(false)} disabled={announcing} className="btn-ghost">
+                Cancel
+              </button>
+              <button onClick={handleAnnounceAll} disabled={announcing} className="btn-primary">
+                <Send size={14} />
+                {announcing ? "Sending…" : "Yes, send"}
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setConfirmingAnnounce(true)}
+              disabled={!announceMessage.trim() || !isFirebaseConfigured}
+              className="btn-primary"
+            >
+              <Send size={14} />
+              Send to everyone
+            </button>
+          )}
         </div>
+
+        {/* The real banner component, so what is composed here cannot drift
+            from what actually lands on everyone's screen. */}
+        {announceMessage.trim() && (
+          <div className="mt-4">
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted">Preview</p>
+            <AnnouncementCard message={announceMessage.trim()} fromDisplayName={myDisplayName} />
+          </div>
+        )}
       </div>
 
       <div className="panel p-5">

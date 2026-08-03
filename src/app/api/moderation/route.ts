@@ -3,7 +3,21 @@ import { getCurrentUser } from "@/lib/auth";
 import { isAdminEmail } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
 
-const VALID_ACTIONS = ["warn", "mute", "timeout", "ban", "unban", "unmute", "reset", "message", "remove timeout"];
+// "announce" is a broadcast to everyone; "message" is aimed at one person.
+// Logging both under one name would make the audit trail unable to tell "I told
+// this user something" from "I told all of them".
+const VALID_ACTIONS = [
+  "warn",
+  "mute",
+  "timeout",
+  "ban",
+  "unban",
+  "unmute",
+  "reset",
+  "message",
+  "announce",
+  "remove timeout",
+];
 
 export async function GET() {
   const user = await getCurrentUser();
