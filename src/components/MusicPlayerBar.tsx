@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useRef } from "react";
 import { Play, Pause, SkipBack, SkipForward, Shuffle, Volume2, VolumeX, Music2 } from "lucide-react";
 import { useMusicPlayer } from "@/context/MusicPlayerContext";
 
@@ -32,7 +33,34 @@ export default function MusicPlayerBar() {
     toggleShuffle,
   } = useMusicPlayer();
 
-  if (loading || tracks.length === 0) return null;
+  // This bar is position:fixed under the navbar, so it can't push anything
+  // down on its own — the layout has to reserve the room. It also isn't always
+  // there: an empty playlist renders nothing at all. Publishing the bar's real
+  // height (and clearing it when there's no bar) is what lets the layout
+  // reserve exactly as much as currently exists, instead of a constant that
+  // left a band of dead space at the top of every page for anyone who hadn't
+  // uploaded music. Measured rather than hard-coded so it stays right if the
+  // bar's contents ever change height.
+  const barRef = useRef<HTMLDivElement>(null);
+  const hidden = loading || tracks.length === 0;
+  useEffect(() => {
+    const root = document.documentElement;
+    const el = barRef.current;
+    if (!el) {
+      root.style.removeProperty("--music-bar-height");
+      return;
+    }
+    const publish = () => root.style.setProperty("--music-bar-height", `${el.offsetHeight}px`);
+    publish();
+    const observer = new ResizeObserver(publish);
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+      root.style.removeProperty("--music-bar-height");
+    };
+  }, [hidden]);
+
+  if (hidden) return null;
 
   return (
     <>
@@ -45,7 +73,10 @@ export default function MusicPlayerBar() {
         </button>
       )}
 
-      <div className="fixed left-0 right-0 top-16 z-30 border-b border-border/60 bg-surface/80 px-4 py-2 backdrop-blur-xl">
+      <div
+        ref={barRef}
+        className="fixed left-0 right-0 top-16 z-30 border-b border-border/60 bg-surface/80 px-4 py-2 backdrop-blur-xl"
+      >
         <div className="flex items-center gap-3">
           <div className="flex min-w-0 flex-1 items-center gap-2">
             <Music2 size={16} className="shrink-0 text-accent-bright" />
