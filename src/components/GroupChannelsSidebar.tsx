@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   Hash,
   Volume2,
+  PhoneOff,
   ChevronDown,
   ChevronRight,
   Copy,
@@ -147,7 +148,7 @@ export default function GroupChannelsSidebar({
 }) {
   const router = useRouter();
   const { showToast } = useToast();
-  const { activeGroupCall, joinGroupCall } = useGroupCall();
+  const { activeGroupCall, joinGroupCall, leaveGroupCall } = useGroupCall();
   const { activeCall } = useCall();
   const [joiningVoice, setJoiningVoice] = useState(false);
   // Voice is per-server (joinGroupCall takes a groupId, not a channel id), so
@@ -293,34 +294,79 @@ export default function GroupChannelsSidebar({
       const connectedHere = activeGroupCall?.groupId === groupId;
       const inOtherCall = Boolean(activeGroupCall) && !connectedHere;
       return (
-        <div key={channel.id}>
-          <button
-            type="button"
-            onClick={handleJoinVoice}
-            disabled={joiningVoice || connectedHere || inOtherCall}
-            title={inOtherCall ? "Leave your current voice call first" : connectedHere ? "You're connected" : "Join voice"}
-            className={`flex w-full items-center gap-1.5 rounded-lg py-1.5 pl-3 pr-2 text-left text-sm transition-colors disabled:cursor-default ${
-              connectedHere
-                ? "bg-accent/15 text-accent-bright"
-                : "text-muted hover:bg-surface-2/40 hover:text-foreground disabled:hover:bg-transparent"
-            }`}
-          >
-            <Volume2 size={16} className="shrink-0" />
-            <span className="flex-1 truncate">{channel.name}</span>
-            {voicePeers.length > 0 && (
-              <span className="shrink-0 text-[10px] font-semibold tabular-nums text-muted">{voicePeers.length}</span>
+        // Connected turns the whole voice block into a lit panel rather than a
+        // tinted row, so "I am in this channel right now" is unmistakable
+        // against a sidebar of otherwise identical rows.
+        <div
+          key={channel.id}
+          className={
+            connectedHere
+              ? "rounded-xl border border-emerald-500/30 bg-emerald-500/[0.07] p-1.5 shadow-[0_0_24px_-14px_rgba(52,211,153,0.9)]"
+              : ""
+          }
+        >
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={handleJoinVoice}
+              disabled={joiningVoice || connectedHere || inOtherCall}
+              title={inOtherCall ? "Leave your current voice call first" : connectedHere ? "You're connected" : "Join voice"}
+              className={`flex min-w-0 flex-1 items-center gap-1.5 rounded-lg py-1.5 pl-2 pr-2 text-left text-sm transition-colors disabled:cursor-default ${
+                connectedHere
+                  ? "text-emerald-300"
+                  : "text-muted hover:bg-surface-2/40 hover:text-foreground disabled:hover:bg-transparent"
+              }`}
+            >
+              <Volume2 size={16} className="shrink-0" />
+              <span className="flex-1 truncate">{channel.name}</span>
+              {connectedHere ? (
+                <span className="flex shrink-0 items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                  </span>
+                  Live
+                </span>
+              ) : (
+                voicePeers.length > 0 && (
+                  <span className="shrink-0 rounded-full bg-surface-2 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-muted">
+                    {voicePeers.length}
+                  </span>
+                )
+              )}
+            </button>
+
+            {/* Leaving used to mean hunting for the floating call window. The
+                channel you are in is the obvious place to get out of it. */}
+            {connectedHere && (
+              <button
+                type="button"
+                onClick={() => leaveGroupCall()}
+                title="Disconnect from voice"
+                className="shrink-0 rounded-lg p-1.5 text-red-400 transition-colors hover:bg-red-500/15 hover:text-red-300"
+              >
+                <PhoneOff size={14} />
+              </button>
             )}
-          </button>
+          </div>
 
           {/* Who's actually in voice — the roster is per-server (see the
               voicePeers subscription), so it hangs under the voice channel
-              the same way Discord lists connected members. */}
+              the same way Discord lists connected members. Avatars rather than
+              a repeated speaker glyph: in a server you are scanning for who,
+              and a name alone made every row look the same. */}
           {voicePeers.length > 0 && (
-            <div className="mt-0.5 flex flex-col gap-0.5 pl-8">
+            <div className="mt-1 flex flex-col gap-0.5 pl-2">
               {voicePeers.map((peer) => (
-                <div key={peer.code} className="flex items-center gap-1.5 py-0.5 text-xs text-muted">
-                  <Volume2 size={11} className="shrink-0 text-emerald-400" />
-                  <span className="truncate">{peer.displayName}</span>
+                <div
+                  key={peer.code}
+                  className="flex items-center gap-2 rounded-lg px-1.5 py-1 text-xs text-muted transition-colors hover:bg-surface-2/40"
+                >
+                  <span className="relative shrink-0">
+                    <ProfileAvatar code={peer.code} displayName={peer.displayName} size={22} />
+                    <span className="absolute -bottom-0.5 -right-0.5 block h-2 w-2 rounded-full bg-emerald-400 ring-2 ring-surface" />
+                  </span>
+                  <span className="truncate text-foreground">{peer.displayName}</span>
                 </div>
               ))}
             </div>
