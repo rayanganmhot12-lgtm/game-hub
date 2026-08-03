@@ -36,12 +36,16 @@ export default function Sidebar({
 }) {
   const pathname = usePathname();
 
-  // Inside a server, the server rail + channel sidebar take over as
-  // navigation — the main app nav would just be redundant clutter.
+  // These areas all bring their own navigation column — the server rail and
+  // channel list inside a server, and the sub-navigation elsewhere. Showing
+  // this one too would be redundant, and on /playlist it was actively
+  // misleading: this nav has no Playlist entry, so it rendered with nothing
+  // highlighted and no way back to the column the user had clicked from.
   if (
     pathname.startsWith("/groups/") ||
     pathname.startsWith("/friends") ||
     pathname.startsWith("/store") ||
+    pathname.startsWith("/playlist") ||
     pathname.startsWith("/moderation")
   )
     return null;
