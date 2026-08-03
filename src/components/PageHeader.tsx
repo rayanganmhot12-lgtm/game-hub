@@ -9,7 +9,9 @@ export default function PageHeader({
   action,
 }: {
   title: string;
-  subtitle?: string;
+  // A node rather than a string: some subtitles carry inline markup, such as
+  // Connections highlighting the signed-in address mid-sentence.
+  subtitle?: ReactNode;
   // Right-aligned slot for a primary action or a link belonging to the page.
   action?: ReactNode;
 }) {

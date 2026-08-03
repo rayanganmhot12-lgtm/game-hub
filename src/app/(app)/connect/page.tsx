@@ -4,6 +4,7 @@ import PlatformBadge from "@/components/PlatformBadge";
 import ConnectSuccessSound from "@/components/ConnectSuccessSound";
 import ErrorToastFromQuery from "@/components/ErrorToastFromQuery";
 import SteamApiKeyPanel from "@/components/SteamApiKeyPanel";
+import PageHeader from "@/components/PageHeader";
 
 const ERROR_MESSAGES: Record<string, string> = {
   steam_auth_failed: "Steam login failed to verify. Please try again.",
@@ -20,11 +21,15 @@ export default async function ConnectPage() {
         <ConnectSuccessSound />
         <ErrorToastFromQuery messages={ERROR_MESSAGES} />
       </Suspense>
-      <h1 className="text-2xl font-bold text-foreground">Connections</h1>
-      <p className="mt-1 text-sm text-muted">
-        Signed in as <span className="text-foreground">{user?.email}</span>. Link platform
-        accounts below to pull them into your unified library.
-      </p>
+      <PageHeader
+        title="Connections"
+        subtitle={
+          <>
+            Signed in as <span className="text-foreground">{user?.email}</span>. Link platform accounts below to
+            pull them into your unified library.
+          </>
+        }
+      />
 
       <div className="mt-6 flex flex-col gap-3">
         {accounts.map((a) => (

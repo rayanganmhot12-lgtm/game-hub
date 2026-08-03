@@ -5,6 +5,7 @@ import { Upload, Play, Pause, Trash2, Music2, ListMusic, ChevronUp, ChevronDown,
 import { useMusicPlayer } from "@/context/MusicPlayerContext";
 import { useToast } from "@/context/ToastContext";
 import EmptyState from "@/components/EmptyState";
+import PageHeader from "@/components/PageHeader";
 import type { Track } from "@/context/MusicPlayerContext";
 
 function uploadWithProgress(file: File, onProgress: (pct: number) => void): Promise<{ ok: boolean; error?: string }> {
@@ -111,12 +112,14 @@ export default function PlaylistManager({ isAdmin }: { isAdmin: boolean }) {
 
   return (
     <div className="mx-auto max-w-2xl pb-16">
-      <h1 className="text-2xl font-bold text-foreground">Playlist</h1>
-      <p className="mt-1 text-sm text-muted">
-        {isAdmin
-          ? "Tracks you add here play for everyone using Game Hub."
-          : "The background playlist for Game Hub. Sit back and listen."}
-      </p>
+      <PageHeader
+        title="Playlist"
+        subtitle={
+          isAdmin
+            ? "Tracks you add here play for everyone using Game Hub."
+            : "The background playlist for Game Hub. Sit back and listen."
+        }
+      />
 
       {isAdmin && (
         <label className="mt-6 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border/70 bg-surface/20 p-8 text-center transition-colors hover:border-accent/50 hover:bg-accent/5">

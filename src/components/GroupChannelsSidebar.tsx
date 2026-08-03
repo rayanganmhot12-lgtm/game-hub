@@ -650,7 +650,7 @@ function InvitePanel({
           >
             <X size={16} />
           </button>
-          <h2 className="mb-3 text-sm font-semibold text-foreground">Invite People to {groupName}</h2>
+          <h2 className="section-title mb-3">Invite People to {groupName}</h2>
 
           <button
             onClick={onCopy}
@@ -871,7 +871,7 @@ function ChannelsTab({
 
   return (
     <div className="max-h-[70vh] overflow-y-auto pr-1">
-      <h2 className="mb-4 text-sm font-semibold text-foreground">Channels</h2>
+      <h2 className="section-title mb-4">Channels</h2>
 
       <div className="mb-4">
         <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">Uncategorized</p>
@@ -985,7 +985,7 @@ function TagTab({ groupId, tag }: { groupId: string; tag: GroupTag | null }) {
 
   return (
     <div className="max-h-[70vh] overflow-y-auto pr-1">
-      <h2 className="mb-1 text-sm font-semibold text-foreground">Server Tag</h2>
+      <h2 className="section-title mb-1">Server Tag</h2>
       <p className="mb-4 text-xs text-muted">
         A short tag members can show next to their name in this server, from the Nickname menu.
       </p>
@@ -1187,7 +1187,7 @@ function SettingsPanel({
           <div className="min-h-0 overflow-y-auto pr-1">
           {section === "profile" ? (
             <div>
-              <h2 className="mb-4 text-sm font-semibold text-foreground">Server Profile</h2>
+              <h2 className="section-title mb-4">Server Profile</h2>
 
               <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-muted">Server Name</label>
               <input value={name} onChange={(e) => setName(e.target.value)} className="input-field mb-4 w-full" />

@@ -177,7 +177,7 @@ export default function SwitchAccountsMenu() {
             >
               <X size={16} />
             </button>
-            <h2 className="mb-3 text-sm font-semibold text-foreground">Add Another Account</h2>
+            <h2 className="section-title mb-3">Add Another Account</h2>
             <input
               type="email"
               required

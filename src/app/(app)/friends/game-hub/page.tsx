@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { LayoutDashboard, Library, Trophy, Plug } from "lucide-react";
+import PageHeader from "@/components/PageHeader";
 
 const cards = [
   {
@@ -32,8 +33,7 @@ export default function GameHubPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Game Hub</h1>
-        <p className="text-sm text-muted">Quick links to your Steam library and connected accounts.</p>
+        <PageHeader title="Game Hub" subtitle="Quick links to your Steam library and connected accounts." />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

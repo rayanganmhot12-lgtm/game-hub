@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser, getDisplayName } from "@/lib/auth";
 import { PLUS_ITEM_ID } from "@/lib/cosmetics";
 import ProfileManager from "@/components/ProfileManager";
+import PageHeader from "@/components/PageHeader";
 
 export default async function ProfilePage() {
   const user = await getCurrentUser();
@@ -13,8 +14,7 @@ export default async function ProfilePage() {
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Profile</h1>
-        <p className="text-sm text-muted">Your photo and username, shown across Friends, Chat, and Groups.</p>
+        <PageHeader title="Profile" subtitle="Your photo and username, shown across Friends, Chat, and Groups." />
       </div>
       <ProfileManager
         initialDisplayName={getDisplayName(user)}

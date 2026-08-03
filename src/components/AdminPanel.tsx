@@ -114,7 +114,7 @@ export default function AdminPanel({
   return (
     <div className="flex flex-col gap-4">
       <div className="panel p-5">
-        <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold text-foreground">
+        <h2 className="section-title mb-1">
           <Sparkles size={16} className="text-accent-bright" />
           Animated Name
         </h2>
@@ -152,7 +152,7 @@ export default function AdminPanel({
       </div>
 
       <div className="panel p-5">
-        <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold text-foreground">
+        <h2 className="section-title mb-1">
           <ShieldCheck size={16} className="text-accent-bright" />
           Grant DEV / ADMIN Badge
         </h2>

@@ -26,7 +26,7 @@ export default function ThemeEditorPage() {
       />
 
       <div className="panel p-5">
-        <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
+        <h2 className="section-title mb-3">
           <Palette size={16} className="text-accent-bright" />
           Accent Color
         </h2>
@@ -62,7 +62,7 @@ export default function ThemeEditorPage() {
       </div>
 
       <div className="panel p-5">
-        <h2 className="mb-4 text-sm font-semibold text-foreground">Background</h2>
+        <h2 className="section-title mb-4">Background</h2>
 
         <div className="flex flex-col gap-4">
           <div>

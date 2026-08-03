@@ -80,7 +80,7 @@ export function MembersTab({
 
   return (
     <div className="max-h-[70vh] overflow-y-auto pr-1">
-      <h2 className="mb-4 text-sm font-semibold text-foreground">Members</h2>
+      <h2 className="section-title mb-4">Members</h2>
       <div className="flex flex-col gap-1">
         {members.map((m) => (
           <div key={m.code} className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-surface-2/40">
@@ -157,7 +157,7 @@ export function RolesTab({ groupId, roles }: { groupId: string; roles: Array<Gro
 
   return (
     <div className="max-h-[70vh] overflow-y-auto pr-1">
-      <h2 className="mb-1 text-sm font-semibold text-foreground">Roles</h2>
+      <h2 className="section-title mb-1">Roles</h2>
       <p className="mb-4 text-xs text-muted">Simple name tags — no permissions or channel access attached.</p>
 
       <div className="mb-4 flex flex-col gap-1">
@@ -213,7 +213,7 @@ export function BansTab({ groupId }: { groupId: string }) {
 
   return (
     <div className="max-h-[70vh] overflow-y-auto pr-1">
-      <h2 className="mb-4 text-sm font-semibold text-foreground">Banned Users</h2>
+      <h2 className="section-title mb-4">Banned Users</h2>
       {bans.length === 0 ? (
         <p className="text-xs text-muted">No one&apos;s banned from this server.</p>
       ) : (
@@ -259,7 +259,7 @@ export function AutoModTab({ groupId }: { groupId: string }) {
 
   return (
     <div className="max-h-[70vh] overflow-y-auto pr-1">
-      <h2 className="mb-1 text-sm font-semibold text-foreground">AutoMod</h2>
+      <h2 className="section-title mb-1">AutoMod</h2>
       <p className="mb-4 text-xs text-muted">
         Messages containing any of these words or phrases are blocked before sending. One per line.
       </p>
@@ -356,7 +356,7 @@ export function EmojiTab({ groupId }: { groupId: string }) {
 
   return (
     <div className="max-h-[70vh] overflow-y-auto pr-1">
-      <h2 className="mb-1 text-sm font-semibold text-foreground">Emoji</h2>
+      <h2 className="section-title mb-1">Emoji</h2>
       <p className="mb-4 text-xs text-muted">
         Type <code className="text-accent-bright">:name:</code> in a message to use one of these here.
       </p>

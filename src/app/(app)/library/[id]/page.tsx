@@ -98,7 +98,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ id:
 
       {screenshots.length > 0 && (
         <div className="panel p-5">
-          <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
+          <h2 className="section-title mb-3">
             <Images size={16} className="text-accent-bright" />
             Screenshots
           </h2>
@@ -118,7 +118,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ id:
       {ownedGame.account.platform === "STEAM" && (
         <div className="panel p-5">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            <h2 className="section-title">
               <Trophy size={16} className="text-accent-bright" />
               Achievements
             </h2>

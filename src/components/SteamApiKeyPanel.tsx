@@ -54,7 +54,7 @@ export default function SteamApiKeyPanel() {
 
   return (
     <div className="panel p-4">
-      <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold text-foreground">
+      <h2 className="section-title mb-1">
         <KeyRound size={15} className="text-accent-bright" />
         Steam API Key
       </h2>

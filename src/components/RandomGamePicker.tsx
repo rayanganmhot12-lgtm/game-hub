@@ -42,7 +42,7 @@ export default function RandomGamePicker() {
     <div className="panel p-4">
       <div className="mb-3 flex items-center gap-2">
         <Dices size={16} className="text-accent-bright" />
-        <h2 className="text-sm font-semibold text-foreground">What should I play?</h2>
+        <h2 className="section-title">What should I play?</h2>
       </div>
 
       {!picked ? (

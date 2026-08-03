@@ -143,7 +143,7 @@ export function NicknameModal({
           >
             <X size={16} />
           </button>
-          <h2 className="mb-1 text-sm font-semibold text-foreground">
+          <h2 className="section-title mb-1">
             {isSelf ? "Nickname in this Server" : `Nickname for ${targetDisplayName ?? "this member"}`}
           </h2>
           <p className="mb-3 text-xs text-muted">

@@ -45,7 +45,7 @@ export default function RatingNotes({
 
   return (
     <div className="panel p-5">
-      <h2 className="mb-3 text-sm font-semibold text-foreground">Your Rating & Notes</h2>
+      <h2 className="section-title mb-3">Your Rating & Notes</h2>
 
       <div className="flex items-center gap-1">
         {[1, 2, 3, 4, 5].map((value) => {

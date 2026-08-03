@@ -2,6 +2,7 @@ import { getCurrentUser, getDisplayName } from "@/lib/auth";
 import { getOrCreateFriendCode } from "@/lib/friendCodeServer";
 import { prisma } from "@/lib/prisma";
 import FriendsHub from "@/components/FriendsHub";
+import PageHeader from "@/components/PageHeader";
 
 export default async function FriendsPage() {
   const user = await getCurrentUser();
@@ -23,8 +24,10 @@ export default async function FriendsPage() {
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Friends</h1>
-        <p className="text-sm text-muted">Friends, groups, and servers — add by code, chat, call, or join with an invite.</p>
+        <PageHeader
+          title="Friends"
+          subtitle="Friends, groups, and servers — add by code, chat, call, or join with an invite."
+        />
       </div>
 
       <FriendsHub

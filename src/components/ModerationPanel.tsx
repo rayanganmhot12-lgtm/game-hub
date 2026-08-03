@@ -237,7 +237,7 @@ export default function ModerationPanel({
       )}
 
       <div className="panel p-5">
-        <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold text-foreground">
+        <h2 className="section-title mb-1">
           <Megaphone size={16} className="text-accent-bright" />
           Announce to Everyone
         </h2>
@@ -263,7 +263,7 @@ export default function ModerationPanel({
       </div>
 
       <div className="panel p-5">
-        <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
+        <h2 className="section-title mb-3">
           <ShieldAlert size={16} className="text-accent-bright" />
           Target
         </h2>
@@ -293,7 +293,7 @@ export default function ModerationPanel({
       </div>
 
       <div className="panel p-5">
-        <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
+        <h2 className="section-title mb-3">
           <MessageSquareWarning size={16} className="text-accent-bright" />
           Warn
         </h2>
@@ -311,7 +311,7 @@ export default function ModerationPanel({
       </div>
 
       <div className="panel p-5">
-        <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
+        <h2 className="section-title mb-3">
           <Send size={16} className="text-accent-bright" />
           Send Message
         </h2>
@@ -330,7 +330,7 @@ export default function ModerationPanel({
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="panel p-5">
-          <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
+          <h2 className="section-title mb-3">
             <VolumeX size={16} className="text-accent-bright" />
             Mute
           </h2>
@@ -345,7 +345,7 @@ export default function ModerationPanel({
         </div>
 
         <div className="panel p-5">
-          <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
+          <h2 className="section-title mb-3">
             <Clock size={16} className="text-accent-bright" />
             Timeout
           </h2>
@@ -371,7 +371,7 @@ export default function ModerationPanel({
         </div>
 
         <div className="panel p-5">
-          <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
+          <h2 className="section-title mb-3">
             <Ban size={16} className="text-accent-bright" />
             Ban
           </h2>
@@ -388,7 +388,7 @@ export default function ModerationPanel({
 
       <div className="panel p-5">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+          <h2 className="section-title">
             <ShieldCheck size={16} className="text-accent-bright" />
             Recent Actions
           </h2>

@@ -38,7 +38,7 @@ export default function TagsAndBacklog({
 
   return (
     <div className="panel p-5">
-      <h2 className="mb-3 text-sm font-semibold text-foreground">Tags &amp; Backlog</h2>
+      <h2 className="section-title mb-3">Tags &amp; Backlog</h2>
 
       <button
         onClick={toggleBacklog}

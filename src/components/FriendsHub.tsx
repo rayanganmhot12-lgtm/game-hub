@@ -360,7 +360,7 @@ export default function FriendsHub({
   return (
     <div className="flex flex-col gap-6">
       <div className="panel p-5">
-        <h2 className="mb-2 text-sm font-semibold text-foreground">Your Friend Code</h2>
+        <h2 className="section-title mb-2">Your Friend Code</h2>
         <div className="flex items-center gap-2">
           <code className="rounded-lg border border-border bg-surface-2/60 px-4 py-2 text-lg tracking-widest text-accent-bright">
             {formatFriendCode(myCode)}
@@ -423,7 +423,7 @@ export default function FriendsHub({
                 exit={{ opacity: 0, height: 0 }}
                 className="panel p-5"
               >
-                <h2 className="mb-3 text-sm font-semibold text-foreground">Friend Requests</h2>
+                <h2 className="section-title mb-3">Friend Requests</h2>
                 <div className="flex flex-col gap-2">
                   {requests.map((req, i) => (
                     <motion.div
@@ -461,7 +461,7 @@ export default function FriendsHub({
                 exit={{ opacity: 0, height: 0 }}
                 className="panel p-5"
               >
-                <h2 className="mb-3 text-sm font-semibold text-foreground">Group Invites</h2>
+                <h2 className="section-title mb-3">Group Invites</h2>
                 <div className="flex flex-col gap-2">
                   {invites.map((inv, i) => (
                     <motion.div
@@ -498,7 +498,7 @@ export default function FriendsHub({
 
           {tab === "add" ? (
             <div className="panel p-5">
-              <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
+              <h2 className="section-title mb-3">
                 <UserPlus size={16} className="text-accent-bright" />
                 Add a Friend
               </h2>
@@ -519,7 +519,7 @@ export default function FriendsHub({
           ) : (
             <div className="panel p-5">
               <div className="mb-3 flex items-center justify-between gap-3">
-                <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                <h2 className="section-title">
                   <Users size={16} className="text-accent-bright" />
                   {tab === "online" ? "Online" : "All Friends"}
                 </h2>
