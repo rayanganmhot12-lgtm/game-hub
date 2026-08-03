@@ -49,7 +49,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      <div className="pointer-events-none fixed bottom-16 right-4 z-50 flex flex-col gap-2">
+      {/* Toasts stack above the music dock when there is one, and drop to the
+          corner when there isn't. The offset used to be a hard-coded 4rem
+          guarding empty space; the dock now actually occupies the bottom edge.
+          See MusicPlayerBar, which publishes --music-bar-height. */}
+      <div className="pointer-events-none fixed bottom-[calc(1rem+var(--music-bar-height,0px))] right-4 z-50 flex flex-col gap-2">
         <AnimatePresence>
           {toasts.map((toast) => {
             const Icon = ICONS[toast.variant];

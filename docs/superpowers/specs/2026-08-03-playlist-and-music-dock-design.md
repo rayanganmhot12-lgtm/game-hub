@@ -67,12 +67,19 @@ its siblings would be the same inconsistency this change exists to remove.
 `--music-bar-height` is read in three places today, all as top padding, plus
 one hard-coded bottom offset:
 
-| File | Now | After |
-|---|---|---|
-| `src/app/(app)/layout.tsx` `<main>` | `pt-[calc(1rem+var(...))]` | `pb-[calc(1rem+var(...))]`, plain `pt` |
-| `src/components/Sidebar.tsx` `<nav>` | `pt-[calc(1rem+var(...))]` | plain `pt-4`; the `UserPanel` wrapper takes `pb-[calc(1rem+var(...))]` |
-| `src/components/ServerRail.tsx` | `pt-[calc(0.75rem+var(...))] pb-3` | `pt-3 pb-[calc(0.75rem+var(...))]` |
-| `src/context/ToastContext.tsx` | `bottom-16` | `bottom-[calc(1rem+var(--music-bar-height,0px))]` |
+Writing an abbreviated class name here would be a mistake: Tailwind v4 scans
+this file too, and a placeholder inside square brackets becomes a real — and
+invalid — utility in the generated stylesheet. So, in prose:
+
+- `src/app/(app)/layout.tsx`, the `<main>` element: the variable moves out of
+  its top padding and into its bottom padding, at the same 1rem / 1.5rem base.
+- `src/components/Sidebar.tsx`: the `<nav>` drops back to a plain top padding,
+  and the `UserPanel` wrapper below it picks up the variable in its bottom
+  padding instead.
+- `src/components/ServerRail.tsx`: same swap — plain top padding, variable
+  bottom padding, at its 0.75rem base.
+- `src/context/ToastContext.tsx`: the hard-coded `bottom-16` becomes the same
+  1rem-plus-variable expression the others use.
 
 The dock spans the full width, so the two sticky full-height columns need the
 clearance at their bottoms or their last rows sit behind it. Toasts were

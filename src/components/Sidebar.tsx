@@ -52,7 +52,7 @@ export default function Sidebar({
 
   return (
     <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-72 shrink-0 flex-col border-r border-border/60 bg-surface/40 backdrop-blur-xl md:flex">
-      <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 pb-4 pt-[calc(1rem+var(--music-bar-height,0px))]">
+      <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 pb-4 pt-4">
         {links.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
           return (
@@ -76,7 +76,9 @@ export default function Sidebar({
           );
         })}
       </nav>
-      <div className="mt-6 pb-4">
+      {/* The music dock is fixed across the full width, so this column's last
+          element is the one it would cover. See MusicPlayerBar. */}
+      <div className="mt-6 pb-[calc(1rem+var(--music-bar-height,0px))]">
         <UserPanel
           displayName={displayName}
           avatarDataUrl={avatarDataUrl}

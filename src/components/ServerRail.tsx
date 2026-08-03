@@ -70,7 +70,7 @@ export default function ServerRail({
 
   return (
     <>
-      <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-[72px] shrink-0 flex-col items-center gap-2 overflow-y-auto border-r border-border/60 bg-surface/60 pb-3 pt-[calc(0.75rem+var(--music-bar-height,0px))] backdrop-blur-xl md:flex">
+      <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-[72px] shrink-0 flex-col items-center gap-2 overflow-y-auto border-r border-border/60 bg-surface/60 pb-[calc(0.75rem+var(--music-bar-height,0px))] pt-3 backdrop-blur-xl md:flex">
         <Link
           href="/friends"
           title="Friends"

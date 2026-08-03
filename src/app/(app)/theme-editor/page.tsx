@@ -1,5 +1,6 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import { useTheme } from "@/context/ThemeContext";
 import { RotateCcw, Palette } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
@@ -77,7 +78,8 @@ export default function ThemeEditorPage() {
               step={0.05}
               value={bgIntensity}
               onChange={(e) => setBgIntensity(parseFloat(e.target.value))}
-              className="w-full accent-[var(--accent)]"
+              className="slider h-3 w-full"
+              style={{ "--fill": `${(bgIntensity / 2) * 100}%` } as CSSProperties}
             />
           </div>
 

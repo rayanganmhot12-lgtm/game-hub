@@ -96,10 +96,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                 nameEffectColor1={user.nameEffectColor1}
                 nameEffectColor2={user.nameEffectColor2}
               />
-              {/* The extra top room is whatever the fixed music bar actually
-                  occupies right now, which is nothing until a playlist exists
-                  — see MusicPlayerBar, which publishes --music-bar-height. */}
-              <main className="flex-1 p-4 pt-[calc(1rem+var(--music-bar-height,0px))] md:p-6 md:pt-[calc(1.5rem+var(--music-bar-height,0px))]">
+              {/* The extra bottom room is whatever the fixed music dock
+                  actually occupies right now, which is nothing until a
+                  playlist exists — see MusicPlayerBar, which publishes
+                  --music-bar-height. */}
+              <main className="flex-1 p-4 pb-[calc(1rem+var(--music-bar-height,0px))] md:p-6 md:pb-[calc(1.5rem+var(--music-bar-height,0px))]">
                 <PageTransition>{children}</PageTransition>
               </main>
             </div>
