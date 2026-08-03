@@ -6,8 +6,6 @@ import WithdrawPointsPanel from "@/components/WithdrawPointsPanel";
 import GiftCosmeticPanel from "@/components/GiftCosmeticPanel";
 import RevokeCosmeticPanel from "@/components/RevokeCosmeticPanel";
 import DevCheatsPanel from "@/components/DevCheatsPanel";
-import StorePricesPanel from "@/components/StorePricesPanel";
-import { getPricedCatalog } from "@/lib/storePricesServer";
 
 export default async function ModerationStorePage() {
   const user = await getCurrentUser();
@@ -18,10 +16,9 @@ export default async function ModerationStorePage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <StorePricesPanel catalog={getPricedCatalog()} />
-      <div className="border-t border-border/40 pt-4">
-        <DevCheatsPanel />
-      </div>
+      {/* Item pricing lives in its own Store Prices tab — it's the one panel
+          here that changes what everyone else sees, not just this account. */}
+      <DevCheatsPanel />
       <div className="border-t border-border/40 pt-4">
         <SendPointsPanel myCode={myCode} myDisplayName={myDisplayName} friends={friends} />
       </div>

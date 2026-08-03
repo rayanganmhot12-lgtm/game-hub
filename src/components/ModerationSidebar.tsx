@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { Gavel, ShieldAlert, Wrench } from "lucide-react";
+import { Gavel, ShieldAlert, Wrench, Tags } from "lucide-react";
 
 const tabs = [
   { href: "/moderation", label: "Actions", icon: Gavel },
   { href: "/moderation/admin", label: "Admin", icon: ShieldAlert },
   { href: "/moderation/store", label: "Store Mod", icon: Wrench },
+  { href: "/moderation/prices", label: "Store Prices", icon: Tags },
 ];
 
 export default function ModerationSidebar() {
