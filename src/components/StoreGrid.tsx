@@ -81,9 +81,25 @@ export default function StoreGrid({
     }
     if (item.type === "banner") {
       return (
-        <CosmeticBanner bannerId={item.id}>
-          <div className="h-24 w-full rounded-lg bg-gradient-to-br from-surface-2 to-surface" />
-        </CosmeticBanner>
+        // The width matters, and its absence is why these previews were blank.
+        // The stage is a flex row, so CosmeticBanner's wrapper is a flex item
+        // sized to its content — while that content asks for `w-full`, which
+        // is a percentage of the wrapper. The circle resolves to zero:
+        // measured, the shimmer and aurora wrappers came out at 0.0px and the
+        // neon-glow one at 6.0px, its two 3px borders with nothing between
+        // them, which is the hairline that showed instead of a banner. Every
+        // other place a banner is drawn puts it in a block with a real width;
+        // this one didn't.
+        <div className="w-full">
+          <CosmeticBanner bannerId={item.id}>
+            {/* Lit rather than near-black, because two of these are overlays.
+                banner-aurora composites with mix-blend-mode: overlay, which
+                over a dark backdrop stays dark — on a profile it sits over
+                someone's actual banner image, so the preview has to stand in
+                for one rather than for a black rectangle. */}
+            <div className="h-24 w-full rounded-lg bg-gradient-to-br from-slate-600 via-slate-700 to-surface-2" />
+          </CosmeticBanner>
+        </div>
       );
     }
     return (
