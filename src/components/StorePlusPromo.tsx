@@ -77,12 +77,21 @@ export default function StorePlusPromo({
         </div>
       </div>
 
-      <div className="flex justify-end">
-        <div className="flex items-center gap-2 rounded-lg border border-border bg-surface-2/40 px-3 py-1.5">
-          <Gem size={15} className="text-accent-bright" />
-          <span className="text-sm font-semibold text-foreground">{points}</span>
-          <span className="text-xs text-muted">points</span>
+      {/* The balance decides what you can buy on this page, so it reads as a
+          balance rather than a small chip tucked into a corner. */}
+      <div className="panel flex items-center justify-between gap-4 p-4">
+        <div className="flex items-center gap-3">
+          <div className="icon-badge h-10 w-10 shrink-0">
+            <Gem size={18} />
+          </div>
+          <div>
+            <p className="text-[11px] font-medium uppercase tracking-wider text-muted">Your balance</p>
+            <p className="stat-value mt-0.5 !text-2xl">{points}</p>
+          </div>
         </div>
+        <p className="max-w-[16rem] text-right text-xs leading-relaxed text-muted">
+          Earned by playing, unlocking achievements, and completing missions.
+        </p>
       </div>
 
       {celebrating && <PlusCelebration onDone={() => setCelebrating(false)} />}

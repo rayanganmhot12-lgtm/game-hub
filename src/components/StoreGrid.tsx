@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Lock } from "lucide-react";
+import { Check, Lock, Gem } from "lucide-react";
 import { useToast } from "@/context/ToastContext";
 import { priceFor, PLUS_ITEM_ID, type CosmeticItem } from "@/lib/cosmetics";
 import { CosmeticFrame, CosmeticBadge, CosmeticBanner } from "@/components/CosmeticFrame";
@@ -68,22 +68,29 @@ export default function StoreGrid({
     return equippedBanner;
   }
 
+  // Sized for the display stage below rather than the old 56px strip — these
+  // are the products, and at the previous scale a frame's glow and a banner's
+  // animation were essentially invisible.
   function previewFor(item: CosmeticItem) {
     if (item.type === "frame") {
       return (
         <CosmeticFrame frameId={item.id}>
-          <div className="h-12 w-12 rounded-full bg-surface-2" />
+          <div className="h-20 w-20 rounded-full bg-gradient-to-br from-surface-2 to-surface" />
         </CosmeticFrame>
       );
     }
     if (item.type === "banner") {
       return (
         <CosmeticBanner bannerId={item.id}>
-          <div className="h-12 w-24 rounded-md bg-gradient-to-br from-surface-2 to-surface" />
+          <div className="h-24 w-full rounded-lg bg-gradient-to-br from-surface-2 to-surface" />
         </CosmeticBanner>
       );
     }
-    return <CosmeticBadge badgeId={item.id} />;
+    return (
+      <span className="scale-[1.6]">
+        <CosmeticBadge badgeId={item.id} />
+      </span>
+    );
   }
 
   const hasPlus = unlockedCosmetics.includes(PLUS_ITEM_ID);
@@ -134,42 +141,76 @@ function ItemCard({
   preview: React.ReactNode;
 }) {
   const canAfford = points >= price;
+  const short = price - points;
 
   return (
-    <div className="panel flex flex-col items-center gap-3 p-4 text-center">
-      <div className="flex h-14 items-center justify-center">{preview}</div>
-      <div>
-        <p className="text-sm font-medium text-foreground">{item.name}</p>
-        <p className="mt-0.5 text-xs text-muted">{item.description}</p>
+    <div
+      className={`panel panel-hover flex flex-col overflow-hidden ${
+        equipped ? "ring-1 ring-accent/50" : ""
+      }`}
+    >
+      {/* A display stage rather than a cramped strip: the item gets its own
+          lit area at the top of the card, the way a product shot would, with
+          the price and ownership called out over it instead of hidden inside
+          the button text. */}
+      <div className="relative flex min-h-[9.5rem] items-center justify-center bg-[radial-gradient(120%_90%_at_50%_15%,rgba(var(--accent-rgb),0.12),transparent_65%)] px-5 py-6">
+        {preview}
+
+        <span className="absolute left-3 top-3">
+          {owned ? (
+            <span className="flex items-center gap-1 rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">
+              <Check size={11} />
+              Owned
+            </span>
+          ) : (
+            <span
+              className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold tabular-nums ${
+                canAfford ? "bg-accent/20 text-accent-bright" : "bg-surface-2/80 text-muted"
+              }`}
+            >
+              <Gem size={10} />
+              {discounted && <span className="font-normal line-through opacity-50">{item.cost}</span>}
+              {price}
+            </span>
+          )}
+        </span>
+
+        {equipped && (
+          <span className="absolute right-3 top-3 rounded-full bg-accent/20 px-2 py-0.5 text-[10px] font-semibold text-accent-bright">
+            Equipped
+          </span>
+        )}
       </div>
 
-      {owned ? (
-        <button
-          onClick={() => onEquip(equipped)}
-          disabled={busy}
-          className={`w-full ${equipped ? "btn-ghost" : "btn-primary"}`}
-        >
-          {equipped ? (
-            <>
-              <Check size={14} />
-              Equipped
-            </>
+      <div className="flex flex-1 flex-col gap-3 border-t border-border/50 bg-gradient-to-b from-surface-2/50 to-surface p-4">
+        <div>
+          <p className="text-sm font-semibold text-foreground">{item.name}</p>
+          <p className="mt-1 text-xs leading-relaxed text-muted">{item.description}</p>
+        </div>
+
+        <div className="mt-auto">
+          {owned ? (
+            <button
+              onClick={() => onEquip(equipped)}
+              disabled={busy}
+              className={`w-full ${equipped ? "btn-ghost !justify-center" : "btn-primary"}`}
+            >
+              {equipped ? "Unequip" : "Equip"}
+            </button>
+          ) : canAfford ? (
+            <button onClick={onPurchase} disabled={busy} className="btn-primary w-full disabled:opacity-50">
+              {busy ? "Unlocking…" : "Unlock"}
+            </button>
           ) : (
-            "Equip"
+            // Saying how far short you are is more use than a dead button —
+            // it turns "no" into a target.
+            <div className="flex items-center justify-center gap-1.5 rounded-lg border border-border/60 bg-surface-2/40 px-3 py-2 text-xs text-muted">
+              <Lock size={12} />
+              {short} more {short === 1 ? "point" : "points"}
+            </div>
           )}
-        </button>
-      ) : (
-        <button
-          onClick={onPurchase}
-          disabled={busy || !canAfford}
-          className="btn-primary w-full disabled:opacity-50"
-          title={!canAfford ? "Not enough points yet" : undefined}
-        >
-          {!canAfford && <Lock size={13} />}
-          {discounted && <span className="text-black/50 line-through">{item.cost}</span>}
-          {price} pts
-        </button>
-      )}
+        </div>
+      </div>
     </div>
   );
 }
