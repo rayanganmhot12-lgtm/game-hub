@@ -18,7 +18,11 @@ import {
 import { useGroupCall } from "@/context/GroupCallContext";
 import { useCall } from "@/context/CallContext";
 import { useToast } from "@/context/ToastContext";
+import { useDraggable } from "@/hooks/useDraggable";
+import { useFullscreen } from "@/hooks/useFullscreen";
 import ProfileAvatar from "@/components/ProfileAvatar";
+
+const POSITION_STORAGE_KEY = "gamehub-call-window-position";
 
 interface Tile {
   code: string;
@@ -136,7 +140,13 @@ export default function CallWindow() {
   const group = useGroupCall();
   const direct = useCall();
   const { showToast } = useToast();
-  const [expanded, setExpanded] = useState(false);
+  // One element, two behaviours: the ref lives here so both hooks address the
+  // same node.
+  const windowRef = useRef<HTMLDivElement | null>(null);
+  const { isFullscreen, toggle: toggleFullscreen } = useFullscreen(windowRef);
+  // Dragging a window that already fills the screen does nothing but fight the
+  // Fullscreen API's own positioning.
+  const { position, dragging, handleProps } = useDraggable(windowRef, POSITION_STORAGE_KEY, isFullscreen);
   const [togglingCamera, setTogglingCamera] = useState(false);
   const [togglingScreen, setTogglingScreen] = useState(false);
   const [micMenuOpen, setMicMenuOpen] = useState(false);
@@ -241,21 +251,40 @@ export default function CallWindow() {
     <AnimatePresence>
       <motion.div
         key="call-window"
+        ref={windowRef}
         initial={{ opacity: 0, y: -16 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -16 }}
-        className={`fixed z-50 flex flex-col gap-2 rounded-2xl border border-border bg-surface/95 p-3 shadow-2xl backdrop-blur-xl transition-all ${
-          expanded ? "inset-8" : "right-4 top-4 max-h-[calc(100vh-2rem)] w-[min(360px,calc(100%-2rem))]"
-        }`}
+        // Inline positioning is deliberately dropped in fullscreen: inline
+        // styles outrank the UA rules that place a fullscreen element, so a
+        // leftover left/top would push it off its own screen. `position` is
+        // null for the first frame, before the starting corner can be measured.
+        style={isFullscreen || !position ? undefined : { left: position.x, top: position.y }}
+        className={`fixed z-50 flex flex-col gap-2 border-border bg-surface/95 p-3 shadow-2xl backdrop-blur-xl ${
+          isFullscreen
+            ? "inset-0 rounded-none border-0"
+            : "max-h-[calc(100vh-2rem)] w-[min(360px,calc(100%-2rem))] rounded-2xl border"
+        } ${position || isFullscreen ? "" : "invisible"}`}
       >
-        <div className="flex items-center justify-between">
+        {/* The drag handle. Only the header, so a drag can't start on the tiles
+            or swallow a press on the controls below. */}
+        <div
+          {...handleProps}
+          className={`flex select-none items-center justify-between ${
+            isFullscreen ? "" : dragging ? "cursor-grabbing" : "cursor-grab"
+          }`}
+        >
           <p className="truncate text-sm font-semibold text-foreground">{title}</p>
-          <button onClick={() => setExpanded((v) => !v)} title={expanded ? "Collapse" : "Expand"} className="rounded-full p-1.5 text-muted hover:text-foreground">
-            {expanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+          <button
+            onClick={toggleFullscreen}
+            title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+            className="rounded-full p-1.5 text-muted hover:text-foreground"
+          >
+            {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
           </button>
         </div>
 
-        <div className={`grid flex-1 gap-2 overflow-y-auto ${expanded ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-1"}`}>
+        <div className={`grid flex-1 gap-2 overflow-y-auto ${isFullscreen ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-1"}`}>
           <VideoTile tile={{ code: "me", displayName: "You", stream: localStream, muted: true }} />
           {tiles.map((t) => (
             <VideoTile key={t.code} tile={t} />
