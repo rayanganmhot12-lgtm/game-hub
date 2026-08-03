@@ -1,5 +1,4 @@
 import { getCurrentUser, getDisplayName } from "@/lib/auth";
-import { getOrCreateFriendCode } from "@/lib/friendCodeServer";
 import { prisma } from "@/lib/prisma";
 import ModerationPanel from "@/components/ModerationPanel";
 
@@ -16,8 +15,6 @@ export default async function ModerationActionsPage() {
   });
 
   const myDisplayName = getDisplayName(user!);
-  // A broadcast carries its sender's code so recipients can skip their own.
-  const myCode = await getOrCreateFriendCode(user!.id);
 
-  return <ModerationPanel myCode={myCode} myDisplayName={myDisplayName} initialActions={actions} />;
+  return <ModerationPanel myDisplayName={myDisplayName} initialActions={actions} />;
 }

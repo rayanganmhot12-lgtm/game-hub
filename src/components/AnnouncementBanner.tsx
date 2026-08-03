@@ -60,8 +60,10 @@ export default function AnnouncementBanner({ myCode }: { myCode: string }) {
       enqueue({ id, message: a.message, fromDisplayName: a.fromDisplayName, kind: "targeted" })
     );
     const unsubGlobal = listenForGlobalAnnouncements((a, id) => {
-      // You know what you broadcast.
-      if (a.fromCode === myCode) return;
+      // The sender gets their own broadcast too. Skipping it seemed obvious —
+      // you know what you sent — but it left no way to see what everyone else
+      // was actually shown, which is the thing you most want to check right
+      // after sending it.
       if (hasSeenAnnouncement(id)) return;
       enqueue({ id, message: a.message, fromDisplayName: a.fromDisplayName, kind: "global" });
     });

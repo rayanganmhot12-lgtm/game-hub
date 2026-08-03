@@ -17,9 +17,6 @@ export interface AnnouncementPayload {
   message: string;
   fromDisplayName: string;
   createdAt: number;
-  // Broadcasts only, so a client can skip its own. Optional because a targeted
-  // announcement has no use for it.
-  fromCode?: string;
 }
 
 // How far back a broadcast is still worth showing. Someone whose app was closed
@@ -72,13 +69,12 @@ export function removeAnnouncement(myCode: string, id: string) {
 // Because the node is shared, no recipient may delete it: that would dismiss the
 // announcement for every other person at the same moment. Dismissal is tracked
 // locally instead, in seenAnnouncements.ts.
-export function sendGlobalAnnouncement(message: string, fromDisplayName: string, fromCode: string) {
+export function sendGlobalAnnouncement(message: string, fromDisplayName: string) {
   const db = getFirebaseDb();
   if (!db) return Promise.reject(new Error("Announcements need Firebase set up — see the README."));
   return push(ref(db, "announcements/global"), {
     message,
     fromDisplayName,
-    fromCode,
     createdAt: Date.now(),
   });
 }

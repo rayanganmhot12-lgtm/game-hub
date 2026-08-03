@@ -34,11 +34,9 @@ const TIMEOUT_OPTIONS = [
 ];
 
 export default function ModerationPanel({
-  myCode,
   myDisplayName,
   initialActions,
 }: {
-  myCode: string;
   myDisplayName: string;
   initialActions: ModerationActionLog[];
 }) {
@@ -219,7 +217,7 @@ export default function ModerationPanel({
     }
     setAnnouncing(true);
     try {
-      await sendGlobalAnnouncement(message, myDisplayName, myCode);
+      await sendGlobalAnnouncement(message, myDisplayName);
       await postAction({
         action: "announce",
         targetCode: "EVERYONE",

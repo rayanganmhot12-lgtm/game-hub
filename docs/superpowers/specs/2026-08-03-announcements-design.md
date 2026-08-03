@@ -48,8 +48,10 @@ Two consequences have to be handled explicitly:
   than the window on each send. One-sided cleanup, needing no extra
   permissions.
 
-The payload gains `fromCode`, so a client skips its own broadcast. You know
-what you sent.
+The sender receives their own broadcast along with everyone else. It first
+carried a `fromCode` so a client could skip its own, on the reasoning that you
+know what you sent — but that left no way to see what everyone else was
+actually shown, which is the thing you most want to check right after sending.
 
 The project's Firebase database runs in test mode (see the README's setup
 step), so the new path needs no security rule change.
@@ -98,10 +100,12 @@ Checkable in the app: the preview, the character counter, the length-derived
 duration, the pause on hover, the queue counter with more than one announcement,
 and that a dismissed announcement stays dismissed across a reload.
 
-**Not checkable alone:** that a broadcast actually reaches a second client.
-Since the sender deliberately does not see their own broadcast, this needs the
-two-client setup — the desktop app signed in as one account and a browser at
-localhost:3000 signed in as another.
+Since the sender sees their own broadcast, sending one and watching it arrive
+is checkable with a single client.
+
+**Not checkable alone:** that a broadcast reaches a *second* client. That needs
+the two-client setup — the desktop app signed in as one account and a browser
+at localhost:3000 signed in as another.
 
 ## Out of scope
 
