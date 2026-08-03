@@ -7,6 +7,7 @@ import StoreSidebar from "@/components/StoreSidebar";
 import StorePlusPromo from "@/components/StorePlusPromo";
 import StoreProfilePreview from "@/components/StoreProfilePreview";
 import SidebarProfilePanel from "@/components/SidebarProfilePanel";
+import PageHeader from "@/components/PageHeader";
 
 export default async function StoreLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
@@ -39,13 +40,10 @@ export default async function StoreLayout({ children }: { children: React.ReactN
         />
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-6">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Store</h1>
-          <p className="text-sm text-muted">
-            Cosmetic profile flair, unlocked with points earned from actually using Game Hub — playing games,
-            unlocking achievements, and syncing. No real money involved.
-          </p>
-        </div>
+        <PageHeader
+          title="Store"
+          subtitle="Cosmetic profile flair, unlocked with points earned from actually using Game Hub — playing games, unlocking achievements, and syncing. No real money involved."
+        />
 
         <div className="flex flex-col gap-6 lg:flex-row">
           <div className="flex min-w-0 flex-1 flex-col gap-6">

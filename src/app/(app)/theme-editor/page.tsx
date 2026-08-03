@@ -2,6 +2,7 @@
 
 import { useTheme } from "@/context/ThemeContext";
 import { RotateCcw, Palette } from "lucide-react";
+import PageHeader from "@/components/PageHeader";
 
 const PRESET_SWATCHES = ["#ff6b00", "#ff1f2d", "#a855f7", "#14b8a6", "#3b82f6", "#ec4899"];
 
@@ -19,12 +20,10 @@ export default function ThemeEditorPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Theme Editor</h1>
-        <p className="text-sm text-muted">
-          Changes apply live across the whole app as you adjust them, and are remembered on this device.
-        </p>
-      </div>
+      <PageHeader
+        title="Theme Editor"
+        subtitle="Changes apply live across the whole app as you adjust them, and are remembered on this device."
+      />
 
       <div className="panel p-5">
         <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">

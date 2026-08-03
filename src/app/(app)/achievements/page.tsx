@@ -4,6 +4,7 @@ import { Trophy } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { computeAchievementsOverview } from "@/lib/achievements";
 import EmptyState from "@/components/EmptyState";
+import PageHeader from "@/components/PageHeader";
 
 export default async function AchievementsPage() {
   const user = await getCurrentUser();
@@ -14,12 +15,7 @@ export default async function AchievementsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Achievements</h1>
-        <p className="text-sm text-muted">
-          Rolled up across every game we&apos;ve tracked achievement data for.
-        </p>
-      </div>
+      <PageHeader title="Achievements" subtitle="Rolled up across every game we've tracked achievement data for." />
 
       {overview.games.length === 0 ? (
         <EmptyState icon={Trophy} title="No achievement data yet">

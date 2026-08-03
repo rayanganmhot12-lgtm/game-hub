@@ -4,6 +4,7 @@ import { getOrCreateFriendCode } from "@/lib/friendCodeServer";
 import { isAdminEmail } from "@/lib/admin";
 import ModerationSidebar from "@/components/ModerationSidebar";
 import SidebarProfilePanel from "@/components/SidebarProfilePanel";
+import PageHeader from "@/components/PageHeader";
 
 export default async function ModerationLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
@@ -29,10 +30,7 @@ export default async function ModerationLayout({ children }: { children: React.R
         />
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-6">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Moderation</h1>
-          <p className="text-sm text-muted">Warn, mute, timeout, or ban a user by their friend code.</p>
-        </div>
+        <PageHeader title="Moderation" subtitle="Warn, mute, timeout, or ban a user by their friend code." />
         {children}
       </div>
     </div>

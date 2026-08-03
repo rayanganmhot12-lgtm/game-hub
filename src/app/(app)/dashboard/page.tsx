@@ -2,10 +2,11 @@ import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { computeStats, computePlaytimeTrend } from "@/lib/stats";
 import { fetchFriendsActivity, type FriendActivity } from "@/lib/steam";
+import PageHeader from "@/components/PageHeader";
 import StatCard from "@/components/StatCard";
 import AnimatedGameGrid from "@/components/AnimatedGameGrid";
 import PlatformChart from "@/components/PlatformChart";
-import { Library, Clock, Layers, Gamepad2, Users } from "lucide-react";
+import { Library, Clock, Layers, Gamepad2, Users, TrendingUp } from "lucide-react";
 import { formatPlaytime } from "@/lib/format";
 import EmptyState from "@/components/EmptyState";
 import RandomGamePicker from "@/components/RandomGamePicker";
@@ -31,8 +32,7 @@ export default async function DashboardPage() {
   return (
     <div className="flex flex-col gap-6">
       <div className="animate-fade-up">
-        <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-        <p className="text-sm text-muted">An overview of your entire game collection.</p>
+        <PageHeader title="Dashboard" subtitle="An overview of your entire game collection." />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -49,15 +49,18 @@ export default async function DashboardPage() {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="animate-fade-up flex flex-col gap-4 lg:col-span-1" style={{ animationDelay: "220ms" }}>
-          <div className="panel p-4">
-            <h2 className="mb-2 text-sm font-semibold text-foreground">Platform Breakdown</h2>
+          <div className="panel p-5">
+            <h2 className="section-title mb-3">
+              <Layers size={13} />
+              Platform Breakdown
+            </h2>
             <PlatformChart data={stats.platformBreakdown} />
           </div>
           <RandomGamePicker />
           {steamAccount && (
-            <div className="panel p-4">
-              <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
-                <Users size={15} className="text-accent-bright" />
+            <div className="panel p-5">
+              <h2 className="section-title mb-3">
+                <Users size={13} />
                 Friends Playing Now
               </h2>
               <FriendsActivity friends={friends} />
@@ -65,10 +68,13 @@ export default async function DashboardPage() {
           )}
         </div>
 
-        <div className="panel animate-fade-up p-4 lg:col-span-2" style={{ animationDelay: "260ms" }}>
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-foreground">Recently Played</h2>
-            <Link href="/library" className="text-xs text-accent-bright hover:underline">
+        <div className="panel animate-fade-up p-5 lg:col-span-2" style={{ animationDelay: "260ms" }}>
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="section-title">
+              <Gamepad2 size={13} />
+              Recently Played
+            </h2>
+            <Link href="/library" className="text-xs font-medium text-accent-bright hover:underline">
               View full library →
             </Link>
           </div>
@@ -79,8 +85,11 @@ export default async function DashboardPage() {
               </Link>
             </EmptyState>
           ) : (
+            // Six columns inside a two-thirds-width panel left each card too
+            // narrow for its own title — every one ellipsed mid-word. Four
+            // gives them room to read.
             <AnimatedGameGrid
-              className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6"
+              className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"
               games={stats.recentlyPlayed.map((g) => ({
                 id: g.id,
                 title: g.title,
@@ -96,13 +105,19 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <div className="panel animate-fade-up p-4" style={{ animationDelay: "300ms" }}>
-          <h2 className="mb-2 text-sm font-semibold text-foreground">Last 2 Weeks</h2>
+        <div className="panel animate-fade-up p-5" style={{ animationDelay: "300ms" }}>
+          <h2 className="section-title mb-3">
+            <Clock size={13} />
+            Last 2 Weeks
+          </h2>
           <RecentActivityChart data={stats.recentActivity} />
         </div>
 
-        <div className="panel animate-fade-up p-4" style={{ animationDelay: "340ms" }}>
-          <h2 className="mb-2 text-sm font-semibold text-foreground">Playtime Trend</h2>
+        <div className="panel animate-fade-up p-5" style={{ animationDelay: "340ms" }}>
+          <h2 className="section-title mb-3">
+            <TrendingUp size={13} />
+            Playtime Trend
+          </h2>
           <PlaytimeTrendChart data={playtimeTrend} />
         </div>
       </div>

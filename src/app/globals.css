@@ -6,7 +6,10 @@
   --surface-2: #1b1917;
   --border: #2a2724;
   --foreground: #f2ede8;
-  --muted: #9a938a;
+  /* Lifted from #9a938a: against --surface that sat at roughly 4.4:1, which is
+     under the 4.5:1 minimum for the body copy and the many small labels this
+     UI leans on. */
+  --muted: #a8a199;
 
   --accent: #ff6b00;
   --accent-bright: #ff7a1a;
@@ -196,6 +199,53 @@ body {
   .bg-aurora__blob {
     animation: none;
   }
+}
+
+/* ==================================================================
+   Typographic scale
+
+   Every page previously opened with the same text-2xl/text-sm pair, and
+   panels labelled their sections at the same size and weight as the body
+   text inside them. With nothing set apart, a page read as one flat sheet.
+   These give the three levels — page, section, and the numbers that are the
+   whole point of a dashboard — distinctly different weights.
+   ================================================================== */
+.page-title {
+  font-size: 1.875rem;
+  line-height: 1.15;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--foreground);
+}
+
+.page-subtitle {
+  margin-top: 0.35rem;
+  max-width: 65ch;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(var(--accent-rgb), 0.85);
+}
+
+/* Tabular figures so a counting-up number doesn't jitter its own width, and
+   tight tracking so large numerals don't read as loosely spaced. */
+.stat-value {
+  font-size: 1.875rem;
+  line-height: 1.1;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  color: var(--foreground);
 }
 
 /* ==================================================================

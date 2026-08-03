@@ -6,6 +6,7 @@ import LibraryFilters from "@/components/LibraryFilters";
 import SavedViews from "@/components/SavedViews";
 import EmptyState from "@/components/EmptyState";
 import type { Platform } from "@/generated/prisma/client";
+import PageHeader from "@/components/PageHeader";
 
 export default async function LibraryPage({
   searchParams,
@@ -30,10 +31,7 @@ export default async function LibraryPage({
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Library</h1>
-        <p className="text-sm text-muted">{games.length} games across all connected platforms.</p>
-      </div>
+      <PageHeader title="Library" subtitle={`${games.length} games across all connected platforms.`} />
 
       <LibraryFilters availableTags={availableTags} />
       <SavedViews />
