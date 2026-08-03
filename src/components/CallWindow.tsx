@@ -86,11 +86,22 @@ function useTrackLive(stream: MediaStream | null): boolean {
 
 function VideoTile({ tile, onContextMenu }: { tile: Tile; onContextMenu?: (e: React.MouseEvent) => void }) {
   const live = useTrackLive(tile.stream);
+  // Fullscreening the whole call window is not the same as fullscreening one
+  // person's shared screen: the window still lays out every tile, so the share
+  // you are trying to read stays a thumbnail among others.
+  const tileRef = useRef<HTMLDivElement | null>(null);
+  const { isFullscreen: tileFullscreen, toggle: toggleTileFullscreen } = useFullscreen(tileRef);
 
   return (
     <div
+      ref={tileRef}
       onContextMenu={onContextMenu}
-      className="relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-lg bg-surface-2"
+      onDoubleClick={() => {
+        if (live) toggleTileFullscreen();
+      }}
+      className={`group/tile relative flex w-full items-center justify-center overflow-hidden bg-surface-2 ${
+        tileFullscreen ? "h-full rounded-none" : "aspect-video rounded-lg"
+      }`}
     >
       {/* Always muted. Every peer's audio now goes through a PeerAudioSink
           mounted by the call context for the whole call — group and 1:1 alike
@@ -105,10 +116,25 @@ function VideoTile({ tile, onContextMenu }: { tile: Tile; onContextMenu?: (e: Re
           ref={(el) => {
             if (el && el.srcObject !== tile.stream) el.srcObject = tile.stream;
           }}
-          className="h-full w-full object-cover"
+          // Cropping to fill is right for a face in a small tile and wrong for
+          // a shared screen filling the display — that is exactly the content
+          // whose edges carry the taskbar, the tabs, the thing being pointed at.
+          className={`h-full w-full ${tileFullscreen ? "object-contain" : "object-cover"}`}
         />
       ) : (
         <ProfileAvatar code={tile.code} displayName={tile.displayName} size={56} />
+      )}
+
+      {/* Only offered where there is something to enlarge. An avatar has no
+          detail that fullscreen would reveal. */}
+      {live && (
+        <button
+          onClick={toggleTileFullscreen}
+          title={tileFullscreen ? "Exit fullscreen" : "Fullscreen this view"}
+          className="absolute right-1.5 top-1.5 rounded-md bg-black/60 p-1.5 text-white opacity-0 transition-opacity hover:bg-black/80 focus-visible:opacity-100 group-hover/tile:opacity-100"
+        >
+          {tileFullscreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+        </button>
       )}
       <span className="absolute bottom-1 left-1.5 flex items-center gap-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white">
         {tile.deafened ? (

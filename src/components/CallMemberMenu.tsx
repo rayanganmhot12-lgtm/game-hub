@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import ProfileAvatar from "@/components/ProfileAvatar";
 import PeerAudioControls from "@/components/PeerAudioControls";
@@ -43,12 +44,22 @@ export default function CallMemberMenu({
     };
   }, [onClose]);
 
+  // No mounted guard: this only ever renders in response to a right-click, so
+  // it is never part of a server render and document.body always exists.
+  //
   // Kept inside the viewport, or a right-click near the bottom or right edge
   // opens a menu half of which cannot be reached.
   const left = Math.max(8, Math.min(target.x, window.innerWidth - MENU_WIDTH - 8));
   const top = Math.max(8, Math.min(target.y, window.innerHeight - MENU_HEIGHT - 8));
 
-  return (
+  // Rendered into <body>, not where it is written. `position: fixed` resolves
+  // against the nearest ancestor with a transform, filter or backdrop-filter
+  // rather than against the viewport — and both places this menu opens from,
+  // the call window and the server sidebar, carry backdrop-blur. Measured: a
+  // fixed child asked for (600, 700) inside such an ancestor landed at
+  // (800, 850), displaced by exactly the ancestor's own offset. So the menu
+  // appeared further from the cursor the further the window had been moved.
+  return createPortal(
     <AnimatePresence>
       <motion.div
         ref={menuRef}
@@ -66,6 +77,7 @@ export default function CallMemberMenu({
         <div className="my-1 h-px bg-border/60" />
         <PeerAudioControls code={target.code} />
       </motion.div>
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }
