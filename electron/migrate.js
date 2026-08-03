@@ -113,4 +113,65 @@ function applyPendingMigrations({ dbPath, migrationsDir, betterSqlite3Path }) {
   }
 }
 
-module.exports = { applyPendingMigrations };
+// Music that ships inside the installer is only half-delivered by copying the
+// file: the playlist is driven by the Track table, so a file with no row is
+// invisible. Fresh installs don't get the rows either — dist-empty.db is built
+// by running migrations against an empty database, which creates schema and no
+// data. This inserts a row for every bundled track the local database doesn't
+// already list.
+//
+// Matched on filename, which is the uploaded UUID name, so re-running is a
+// no-op and a user's own uploads are never touched.
+function seedBundledTracks({ dbPath, seedMusicDir, betterSqlite3Path }) {
+  const manifestPath = path.join(seedMusicDir, "bundled-tracks.json");
+  if (!fs.existsSync(dbPath) || !fs.existsSync(manifestPath)) return [];
+
+  let manifest;
+  try {
+    manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  } catch {
+    return []; // A malformed manifest must never stop the app from starting.
+  }
+  const tracks = Array.isArray(manifest.tracks) ? manifest.tracks : [];
+  if (tracks.length === 0) return [];
+
+  const Database = require(betterSqlite3Path);
+  const db = new Database(dbPath);
+  try {
+    const hasTrackTable =
+      db.prepare("SELECT COUNT(*) AS n FROM sqlite_master WHERE type = 'table' AND name = 'Track'").get().n > 0;
+    if (!hasTrackTable) return [];
+
+    const exists = db.prepare("SELECT 1 FROM Track WHERE filename = ?");
+    const insert = db.prepare(
+      `INSERT INTO Track (id, title, filename, mimeType, sizeBytes, uploadedAt)
+       VALUES (?, ?, ?, ?, ?, ?)`
+    );
+    const added = [];
+    for (const track of tracks) {
+      if (!track?.filename || !track?.title) continue;
+      // Only claim a track the user actually has on disk, so a failed copy
+      // can't leave a playlist entry that plays nothing.
+      if (!fs.existsSync(path.join(seedMusicDir, track.filename))) continue;
+      if (exists.get(track.filename)) continue;
+      insert.run(
+        crypto.randomUUID(),
+        track.title,
+        track.filename,
+        track.mimeType ?? "audio/mpeg",
+        Number(track.sizeBytes ?? 0),
+        new Date().toISOString()
+      );
+      added.push(track.title);
+    }
+    return added;
+  } finally {
+    try {
+      db.close();
+    } catch {
+      // Nothing left to do either way.
+    }
+  }
+}
+
+module.exports = { applyPendingMigrations, seedBundledTracks };

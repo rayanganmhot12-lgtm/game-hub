@@ -5,7 +5,7 @@ const fs = require("fs");
 const crypto = require("crypto");
 const { spawn, execFileSync } = require("child_process");
 const { autoUpdater } = require("electron-updater");
-const { applyPendingMigrations } = require("./migrate");
+const { applyPendingMigrations, seedBundledTracks } = require("./migrate");
 
 require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
 
@@ -170,6 +170,18 @@ function startServer() {
     });
     if (applied.length > 0) {
       console.log(`Applied ${applied.length} pending database migration(s): ${applied.join(", ")}`);
+    }
+
+    // After the migrations, so the Track table is guaranteed to exist, and
+    // after ensureUserData has copied the files, so a row is only ever added
+    // for a track that is actually on disk.
+    const seededTracks = seedBundledTracks({
+      dbPath,
+      seedMusicDir: path.join(userDataDir, "uploads", "music"),
+      betterSqlite3Path: path.join(process.resourcesPath, "standalone", "node_modules", "better-sqlite3"),
+    });
+    if (seededTracks.length > 0) {
+      console.log(`Added ${seededTracks.length} bundled track(s) to the playlist: ${seededTracks.join(", ")}`);
     }
   } catch (err) {
     // Starting anyway would just produce the unexplained 500 screen this
